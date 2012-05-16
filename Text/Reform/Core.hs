@@ -166,20 +166,31 @@ instance (Monoid view, Monad m) => IndexedApplicative (Form m input error view) 
                           return (mempty, return $ Ok (Proved p (unitRange i) a))
 
     (Form frmF) <<*>> (Form frmA) =
-        Form $ do (xml1, mfok) <- frmF
-                  incFormId
-                  (xml2, maok) <- frmA
+        Form $ do ((view1, mfok), (view2, maok)) <- bracketState $
+                    do res1 <- frmF
+                       incFormId
+                       res2 <- frmA
+                       return (res1, res2)
                   fok <- lift $ lift $ mfok
                   aok <- lift $ lift $ maok
                   case (fok, aok) of
-                     (Error errs1, Error errs2) -> return (xml1 `mappend` xml2, return $ Error $ errs1 ++ errs2)
-                     (Error errs1, _)           -> return (xml1 `mappend` xml2, return $ Error $ errs1)
-                     (_          , Error errs2) -> return (xml1 `mappend` xml2, return $ Error $ errs2)
+                     (Error errs1, Error errs2) -> return (view1 `mappend` view2, return $ Error $ errs1 ++ errs2)
+                     (Error errs1, _)           -> return (view1 `mappend` view2, return $ Error $ errs1)
+                     (_          , Error errs2) -> return (view1 `mappend` view2, return $ Error $ errs2)
                      (Ok (Proved p (FormRange x _) f), Ok (Proved q (FormRange _ y) a)) ->
-                         return (xml1 `mappend` xml2, return $ Ok $ Proved { proofs   = p q
+                         return (view1 `mappend` view2, return $ Ok $ Proved { proofs   = p q
                                                                            , pos      = FormRange x y
                                                                            , unProved = f a
                                                                            })
+
+bracketState :: Monad m => FormState m input a -> FormState m input a
+bracketState k = do
+    FormRange startF1 _ <- get
+    res <- k
+    FormRange _ endF2 <- get
+    put $ FormRange startF1 endF2
+    return res
+
 
 instance (Functor m) => Functor (Form m input error view ()) where
     fmap f form =
@@ -197,20 +208,22 @@ instance (Functor m, Monoid view, Monad m) => Applicative (Form m input error vi
     -- this coud be defined in terms of <<*>> if we just changed the proof of frmF to (() -> ())
     (Form frmF) <*> (Form frmA) =
        Form $
-         do (xml1, mfok) <- frmF
-            incFormId
-            (xml2, maok) <- frmA
+         do ((view1, mfok), (view2, maok)) <- bracketState $
+              do res1 <- frmF
+                 incFormId
+                 res2 <- frmA
+                 return (res1, res2)
             fok <- lift $ lift $ mfok
             aok <- lift $ lift $ maok
             case (fok, aok) of
-              (Error errs1, Error errs2) -> return (xml1 `mappend` xml2, return $ Error $ errs1 ++ errs2)
-              (Error errs1, _)           -> return (xml1 `mappend` xml2, return $ Error $ errs1)
-              (_          , Error errs2) -> return (xml1 `mappend` xml2, return $ Error $ errs2)
+              (Error errs1, Error errs2) -> return (view1 `mappend` view2, return $ Error $ errs1 ++ errs2)
+              (Error errs1, _)           -> return (view1 `mappend` view2, return $ Error $ errs1)
+              (_          , Error errs2) -> return (view1 `mappend` view2, return $ Error $ errs2)
               (Ok (Proved p (FormRange x _) f), Ok (Proved q (FormRange _ y) a)) ->
-                  return (xml1 `mappend` xml2, return $ Ok $ Proved { proofs   = ()
-                                                                    , pos      = FormRange x y
-                                                                    , unProved = f a
-                                                                    })
+                  return (view1 `mappend` view2, return $ Ok $ Proved { proofs   = ()
+                                                                      , pos      = FormRange x y
+                                                                      , unProved = f a
+                                                                      })
 
 -- ** Ways to evaluate a Form
 
