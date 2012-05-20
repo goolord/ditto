@@ -13,6 +13,10 @@ import qualified Data.Text   as T
 import Text.Reform.Result (FormId)
 
 -- | an error type used to represent errors that are common to all backends
+--
+-- These errors should only occur if there is a bug in the reform-*
+-- packages. Perhaps we should make them an 'Exception' so that we can
+-- get rid of the 'FormError' class.
 data CommonFormError input
     = InputMissing FormId
     | NoStringFound input
@@ -21,6 +25,19 @@ data CommonFormError input
     | MultiStringsFound input
     | MissingDefaultValue
       deriving (Eq, Ord, Show)
+
+-- | some default error messages for 'CommonFormError'
+commonFormErrorStr :: (input -> String)     -- ^ show 'input' in a format suitable for error messages
+                   -> CommonFormError input -- ^ a 'CommonFormError'
+                   -> String
+commonFormErrorStr showInput cfe =
+    case cfe of
+      (InputMissing formId)     -> "Input field missing for " ++ show formId
+      (NoStringFound input)     -> "Could not extract a string value from: " ++ showInput input
+      (NoFileFound input)       -> "Could not find a file associated with: " ++ showInput input
+      (MultiFilesFound input)   -> "Found multiple files associated with: " ++ showInput input
+      (MultiStringsFound input) -> "Found multiple strings associated with: " ++ showInput input
+      MissingDefaultValue       -> "Missing default value."
 
 -- | A Class to lift a 'CommonFormError' into an application-specific error type
 class FormError e where
