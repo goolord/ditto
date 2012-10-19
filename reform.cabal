@@ -18,7 +18,7 @@ Cabal-version:       >=1.6
 source-repository head
     type:     darcs
     subdir:   reform
-    location: http://patch-tag.com/r/stepcut/reform
+    location: http://hub.darcs.net/stepcut/reform
 
 Library
   Exposed-modules:     Control.Applicative.Indexed
