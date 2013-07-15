@@ -11,7 +11,8 @@ import Control.Monad.Reader        (MonadReader(ask), ReaderT, runReaderT)
 import Control.Monad.State         (MonadState(get,put), StateT, evalStateT)
 import Control.Monad.Trans         (lift)
 import Data.Monoid                 (Monoid(mempty, mappend))
-import Text.Reform.Result       (FormId(..), FormRange(..), Result(..), unitRange, zeroId)
+import Data.Text.Lazy              (Text, unpack)
+import Text.Reform.Result          (FormId(..), FormRange(..), Result(..), unitRange, zeroId)
 
 ------------------------------------------------------------------------------
 -- * Proved
@@ -231,17 +232,17 @@ instance (Functor m, Monoid view, Monad m) => Applicative (Form m input error vi
 --
 runForm :: (Monad m) =>
            Environment m input
-        -> String
+        -> Text
         -> Form m input error view proof a
         -> m (View error view, m (Result error (Proved proof a)))
-runForm env prefix form =
-    evalStateT (runReaderT (unForm form) env) (unitRange (zeroId prefix))
+runForm env prefix' form =
+    evalStateT (runReaderT (unForm form) env) (unitRange (zeroId $ unpack prefix'))
 
 -- | Run a form
 --
 runForm' :: (Monad m) =>
             Environment m input
-         -> String
+         -> Text
         -> Form m input error view proof a
         -> m (view , Maybe a)
 runForm' env prefix form =
@@ -255,7 +256,7 @@ runForm' env prefix form =
 -- browser.
 --
 viewForm :: (Monad m) =>
-            String                          -- ^ form prefix
+            Text                          -- ^ form prefix
          -> Form m input error view proof a -- ^ form to view
          -> m view
 viewForm prefix form =
@@ -272,7 +273,7 @@ viewForm prefix form =
 --
 eitherForm :: (Monad m) =>
               Environment m input             -- ^ Input environment
-           -> String                          -- ^ Identifier for the form
+           -> Text                          -- ^ Identifier for the form
            -> Form m input error view proof a -- ^ Form to run
            -> m (Either view a)               -- ^ Result
 eitherForm env id' form = do
