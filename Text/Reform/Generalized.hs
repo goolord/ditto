@@ -171,7 +171,8 @@ inputMulti choices mkView isSelected =
 
       augmentChoice :: (Monad m) => (Int, (a, lbl, Bool)) -> FormState m input (FormId, Int, lbl, Bool)
       augmentChoice (vl, (a, lbl, checked)) =
-          do i <- getFormId
+          do incFormId
+             i <- getFormId
              return (i, vl, lbl, checked)
 
 
@@ -237,7 +238,8 @@ inputChoice isDefault choices mkView =
 
       augmentChoice :: (Monad m) => (Int, (a, lbl, Bool)) -> FormState m input (FormId, Int, lbl, Bool)
       augmentChoice (vl, (a, lbl,selected)) =
-          do i <- getFormId
+          do incFormId
+             i <- getFormId
              return (i, vl, lbl, selected)
 
 -- | used to create @\<label\>@ elements
