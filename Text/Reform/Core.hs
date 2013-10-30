@@ -24,6 +24,7 @@ data Proved proofs a =
            , pos      :: FormRange
            , unProved :: a
            }
+    deriving Show
 
 instance Functor (Proved ()) where
     fmap f (Proved () pos a) = Proved () pos (f a)

@@ -5,6 +5,8 @@ This module provides helper functions for HTML input elements. These helper func
 module Text.Reform.Generalized where
 
 import Control.Applicative    ((<$>))
+import Control.Monad          (foldM)
+import Control.Monad.Trans    (lift)
 import qualified Data.IntSet  as IS
 import Data.List              (find)
 import Data.Maybe             (mapMaybe)
@@ -237,11 +239,100 @@ inputChoice isDefault choices mkView =
       augmentChoices choices = mapM augmentChoice (zip [0..] choices)
 
       augmentChoice :: (Monad m) => (Int, (a, lbl, Bool)) -> FormState m input (FormId, Int, lbl, Bool)
-      augmentChoice (vl, (a, lbl,selected)) =
+      augmentChoice (vl, (_a, lbl,selected)) =
           do incFormId
              i <- getFormId
              return (i, vl, lbl, selected)
 
+
+-- | radio buttons, single @\<select\>@ boxes
+-- FIXME: get rid of proof ~ ()
+inputChoiceForms :: forall a m error input lbl view proof. (Functor m, Monad m, FormError error, ErrorInputType error ~ input, FormInput input, proof ~ ()) =>
+                    a
+                 -> [(Form m input error view proof a, lbl)]           -- ^ value, label
+                 -> (FormId -> [(FormId, Int, view, lbl, Bool)] -> view)  -- ^ function which generates the view
+                 -> Form m input error view proof a
+inputChoiceForms def choices mkView =
+    Form $ do i <- getFormId -- id used for the 'name' attribute of the radio buttons
+              inp <- getFormInput' i
+
+              case inp of
+                Default -> -- produce view for GET request
+                    do choices' <- mapM viewSubForm =<< augmentChoices (selectFirst choices)
+                       let view = mkView i choices'
+                       mkOk i view def
+
+                Missing -> -- shouldn't ever happen...
+                    do choices' <- mapM viewSubForm =<< augmentChoices (selectFirst choices)
+                       let view = mkView i choices'
+                       mkOk i view def
+
+                (Found v) ->
+                    do let readDec' str = case readDec str of
+                                            [(n,[])] ->   n
+                                            _        -> (-1) -- FIXME: should probably return an internal error?
+                           (Right str) = getInputString v :: Either error String -- FIXME
+                           key         = readDec' str
+                       choices'     <- augmentChoices $ markSelected key (zip [0..] choices)
+                       (choices'', mres) <-
+                           foldM (\(views, res)  (fid, val, frm, lbl, selected) -> do
+                                      incFormId
+                                      if selected
+                                         then do (v, mres) <- unForm frm
+                                                 res' <- lift $ lift mres
+                                                 case res' of
+                                                   (Ok ok) -> do
+                                                       return (((fid, val, unView v [], lbl, selected) : views), return res')
+                                                   (Error errs) -> do
+                                                       return (((fid, val, unView v errs, lbl, selected) : views), return res')
+                                         else do (v, _) <- unForm frm
+                                                 return ((fid, val, unView v [], lbl, selected):views, res)
+                                                                          ) ([], return $ Error [(unitRange i, commonFormError (InputMissing i))]) (choices')
+                       let view = mkView i (reverse choices'')
+                       return (View (const view), mres)
+
+    where
+      selectFirst :: [(Form m input error view proof a, lbl)] -> [(Form m input error view proof a, lbl, Bool)]
+      selectFirst ((frm, lbl):fs) = (frm,lbl,True) : map (\(frm',lbl') -> (frm', lbl', False)) fs
+
+      markSelected :: Int -> [(Int, (Form m input error view proof a, lbl))] -> [(Form m input error view proof a, lbl, Bool)]
+      markSelected n choices =
+          map (\(i, (f, lbl)) -> (f, lbl, i == n)) choices
+
+      viewSubForm :: (FormId, Int, Form m input error view proof a, lbl, Bool) -> FormState m input (FormId, Int, view, lbl, Bool)
+      viewSubForm (fid, vl, frm, lbl, selected) =
+          do incFormId
+             (v,_) <- unForm frm
+             return (fid, vl, unView v [], lbl, selected)
+
+      augmentChoices :: (Monad m) => [(Form m input error view proof a, lbl, Bool)] -> FormState m input [(FormId, Int, Form m input error view proof a, lbl, Bool)]
+      augmentChoices choices = mapM augmentChoice (zip [0..] choices)
+
+      augmentChoice :: (Monad m) => (Int, (Form m input error view proof a, lbl, Bool)) -> FormState m input (FormId, Int, Form m input error view proof a, lbl, Bool)
+      augmentChoice (vl, (frm, lbl, selected)) =
+          do incFormId
+             i <- getFormId
+             return (i, vl, frm, lbl, selected)
+
+
+{-
+              case inp of
+                (Found v) ->
+                    do let readDec' str = case readDec str of
+                                            [(n,[])] -> n
+                                            _ -> (-1) -- FIXME: should probably return an internal error?
+                           (Right str) = getInputString v :: Either error String -- FIXME
+                           key = readDec' str
+                           (choices', mval) =
+                               foldr (\(i, (a, lbl)) (c, v) ->
+                                          if i == key
+                                          then ((a,lbl,True) : c, Just a)
+                                          else ((a,lbl,False): c,     v))
+                                     ([], Nothing) $
+                                     zip [0..] choices
+
+
+-}
 -- | used to create @\<label\>@ elements
 label :: Monad m =>
          (FormId -> view)
