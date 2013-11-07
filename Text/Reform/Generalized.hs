@@ -246,11 +246,10 @@ inputChoice isDefault choices mkView =
 
 
 -- | radio buttons, single @\<select\>@ boxes
--- FIXME: get rid of proof ~ ()
-inputChoiceForms :: forall a m error input lbl view proof. (Functor m, Monad m, FormError error, ErrorInputType error ~ input, FormInput input, proof ~ ()) =>
+inputChoiceForms :: forall a m error input lbl view proof. (Functor m, Monad m, FormError error, ErrorInputType error ~ input, FormInput input) =>
                     a
                  -> [(Form m input error view proof a, lbl)]           -- ^ value, label
-                 -> (FormId -> [(FormId, Int, view, lbl, Bool)] -> view)  -- ^ function which generates the view
+                 -> (FormId -> [(FormId, Int, FormId, view, lbl, Bool)] -> view)  -- ^ function which generates the view
                  -> Form m input error view proof a
 inputChoiceForms def choices mkView =
     Form $ do i <- getFormId -- id used for the 'name' attribute of the radio buttons
@@ -260,12 +259,12 @@ inputChoiceForms def choices mkView =
                 Default -> -- produce view for GET request
                     do choices' <- mapM viewSubForm =<< augmentChoices (selectFirst choices)
                        let view = mkView i choices'
-                       mkOk i view def
+                       mkOk' i view def
 
                 Missing -> -- shouldn't ever happen...
                     do choices' <- mapM viewSubForm =<< augmentChoices (selectFirst choices)
                        let view = mkView i choices'
-                       mkOk i view def
+                       mkOk' i view def
 
                 (Found v) ->
                     do let readDec' str = case readDec str of
@@ -274,24 +273,36 @@ inputChoiceForms def choices mkView =
                            (Right str) = getInputString v :: Either error String -- FIXME
                            key         = readDec' str
                        choices'     <- augmentChoices $ markSelected key (zip [0..] choices)
+
                        (choices'', mres) <-
-                           foldM (\(views, res)  (fid, val, frm, lbl, selected) -> do
+                           foldM (\(views, res)  (fid, val, iview, frm, lbl, selected) -> do
                                       incFormId
                                       if selected
                                          then do (v, mres) <- unForm frm
                                                  res' <- lift $ lift mres
                                                  case res' of
                                                    (Ok ok) -> do
-                                                       return (((fid, val, unView v [], lbl, selected) : views), return res')
+                                                       return (((fid, val, iview, unView v [], lbl, selected) : views), return res')
                                                    (Error errs) -> do
-                                                       return (((fid, val, unView v errs, lbl, selected) : views), return res')
+                                                       return (((fid, val, iview, unView v errs, lbl, selected) : views), return res')
                                          else do (v, _) <- unForm frm
-                                                 return ((fid, val, unView v [], lbl, selected):views, res)
+                                                 return ((fid, val, iview, unView v [], lbl, selected):views, res)
                                                                           ) ([], return $ Error [(unitRange i, commonFormError (InputMissing i))]) (choices')
                        let view = mkView i (reverse choices'')
                        return (View (const view), mres)
 
     where
+      -- | Utility Function: turn a view and return value into a successful 'FormState'
+      mkOk' :: (Monad m) =>
+               FormId
+            -> view
+            -> a
+            -> FormState m input (View error view, m (Result error (Proved proof a)))
+      mkOk' i view val =
+          return ( View $ const $ view
+                 , return $ Error []
+                 )
+
       selectFirst :: [(Form m input error view proof a, lbl)] -> [(Form m input error view proof a, lbl, Bool)]
       selectFirst ((frm, lbl):fs) = (frm,lbl,True) : map (\(frm',lbl') -> (frm', lbl', False)) fs
 
@@ -299,20 +310,22 @@ inputChoiceForms def choices mkView =
       markSelected n choices =
           map (\(i, (f, lbl)) -> (f, lbl, i == n)) choices
 
-      viewSubForm :: (FormId, Int, Form m input error view proof a, lbl, Bool) -> FormState m input (FormId, Int, view, lbl, Bool)
-      viewSubForm (fid, vl, frm, lbl, selected) =
+      viewSubForm :: (FormId, Int, FormId, Form m input error view proof a, lbl, Bool) -> FormState m input (FormId, Int, FormId, view, lbl, Bool)
+      viewSubForm (fid, vl, iview, frm, lbl, selected) =
           do incFormId
              (v,_) <- unForm frm
-             return (fid, vl, unView v [], lbl, selected)
+             return (fid, vl, iview, unView v [], lbl, selected)
 
-      augmentChoices :: (Monad m) => [(Form m input error view proof a, lbl, Bool)] -> FormState m input [(FormId, Int, Form m input error view proof a, lbl, Bool)]
+      augmentChoices :: (Monad m) => [(Form m input error view proof a, lbl, Bool)] -> FormState m input [(FormId, Int, FormId, Form m input error view proof a, lbl, Bool)]
       augmentChoices choices = mapM augmentChoice (zip [0..] choices)
 
-      augmentChoice :: (Monad m) => (Int, (Form m input error view proof a, lbl, Bool)) -> FormState m input (FormId, Int, Form m input error view proof a, lbl, Bool)
+      augmentChoice :: (Monad m) => (Int, (Form m input error view proof a, lbl, Bool)) -> FormState m input (FormId, Int, FormId, Form m input error view proof a, lbl, Bool)
       augmentChoice (vl, (frm, lbl, selected)) =
           do incFormId
              i <- getFormId
-             return (i, vl, frm, lbl, selected)
+             incFormId
+             iview <- getFormId
+             return (i, vl, iview, frm, lbl, selected)
 
 
 {-
