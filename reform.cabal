@@ -1,5 +1,5 @@
 Name:                reform
-Version:             0.2.0
+Version:             0.2.1
 Synopsis:            reform is an HTML form generation and validation library
 Description:          reform follows in the footsteps of formlets and
                       digestive-functors <= 0.2. It provides a
