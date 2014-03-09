@@ -200,7 +200,8 @@ inputChoice isDefault choices mkView =
                        mkOk' i view def
 
                 (Found v) ->
-                    do let readDec' str = case readDec str of
+                    do let readDec' :: String -> Int
+                           readDec' str = case readDec str of
                                             [(n,[])] -> n
                                             _ -> (-1) -- FIXME: should probably return an internal error?
                            (Right str) = getInputString v :: Either error String -- FIXME
