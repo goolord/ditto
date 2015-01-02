@@ -16,9 +16,9 @@ Homepage:            http://www.happstack.com/
 Cabal-version:       >=1.6
 
 source-repository head
-    type:     darcs
+    type:     git
     subdir:   reform
-    location: http://hub.darcs.net/stepcut/reform
+    location: https://github.com/Happstack/reform.git
 
 Library
   Exposed-modules:     Control.Applicative.Indexed
