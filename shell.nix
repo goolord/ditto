@@ -1,5 +1,5 @@
 with (import <nixpkgs> {}).pkgs;
-let pkg = haskellngPackages.callPackage
+let pkg = haskellPackages.callPackage
             ({ mkDerivation, base, containers, mtl, stdenv, text }:
              mkDerivation {
                pname = "reform";
