@@ -1,14 +1,26 @@
-with (import <nixpkgs> {}).pkgs;
-let pkg = haskellPackages.callPackage
-            ({ mkDerivation, base, containers, mtl, stdenv, text }:
-             mkDerivation {
-               pname = "reform";
-               version = "0.2.6";
-               src = ./.;
-               buildDepends = [ base containers mtl text ];
-               homepage = "http://www.happstack.com/";
-               description = "reform is an HTML form generation and validation library";
-               license = stdenv.lib.licenses.bsd3;
-             }) {};
+{ nixpkgs ? import <nixpkgs> {}, compiler ? "default" }:
+
+let
+
+  inherit (nixpkgs) pkgs;
+
+  f = { mkDerivation, base, containers, mtl, stdenv, text }:
+      mkDerivation {
+        pname = "reform";
+        version = "0.2.7.1";
+        src = ./.;
+        libraryHaskellDepends = [ base containers mtl text ];
+        homepage = "http://www.happstack.com/";
+        description = "reform is a type-safe HTML form generation and validation library";
+        license = stdenv.lib.licenses.bsd3;
+      };
+
+  haskellPackages = if compiler == "default"
+                       then pkgs.haskellPackages
+                       else pkgs.haskell.packages.${compiler};
+
+  drv = haskellPackages.callPackage f {};
+
 in
-  pkg.env
+
+  if pkgs.lib.inNixShell then drv.env else drv
