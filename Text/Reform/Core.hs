@@ -11,6 +11,7 @@ import Control.Monad.Reader        (MonadReader(ask), ReaderT, runReaderT)
 import Control.Monad.State         (MonadState(get,put), StateT, evalStateT)
 import Control.Monad.Trans         (lift)
 import Data.Monoid                 (Monoid(mempty, mappend))
+import qualified Data.Semigroup    as SG
 import Data.Text.Lazy              (Text, unpack)
 import Text.Reform.Result          (FormId(..), FormRange(..), Result(..), unitRange, zeroId)
 
@@ -83,12 +84,10 @@ data Environment m input
     = Environment (FormId -> m (Value input))
     | NoEnvironment
 
--- | Not quite sure when this is useful and so hard to say if the rules for combining things with Missing/Default are correct
-instance (Monoid input, Monad m) => Monoid (Environment m input) where
-    mempty = NoEnvironment
-    NoEnvironment `mappend` x = x
-    x `mappend` NoEnvironment = x
-    (Environment env1) `mappend` (Environment env2) =
+instance (SG.Semigroup input, Monad m) => SG.Semigroup (Environment m input) where
+    NoEnvironment <> x = x
+    x <> NoEnvironment = x
+    (Environment env1) <> (Environment env2) =
         Environment $ \id' ->
             do r1 <- (env1 id')
                r2 <- (env2 id')
@@ -96,9 +95,14 @@ instance (Monoid input, Monad m) => Monoid (Environment m input) where
                  (Missing, Missing) -> return Missing
                  (Default, Missing) -> return Default
                  (Missing, Default) -> return Default
-                 (Found x, Found y) -> return $ Found (x `mappend` y)
+                 (Found x, Found y) -> return $ Found (x SG.<> y)
                  (Found x, _      ) -> return $ Found x
                  (_      , Found y) -> return $ Found y
+
+-- | Not quite sure when this is useful and so hard to say if the rules for combining things with Missing/Default are correct
+instance (SG.Semigroup input, Monad m) => Monoid (Environment m input) where
+    mempty = NoEnvironment
+    mappend = (SG.<>)
 
 -- | Utility function: returns the current 'FormId'. This will only make sense
 -- if the form is not composed
@@ -119,7 +123,7 @@ incFormId = do
 --
 newtype View error v = View
     { unView :: [(FormRange, error)] -> v
-    } deriving (Monoid)
+    } deriving (SG.Semigroup, Monoid)
 
 instance Functor (View e) where
     fmap f (View g) = View $ f . g
