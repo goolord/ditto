@@ -9,7 +9,7 @@ A 'Proof' does three things:
 -}
 module Text.Reform.Proof where
 
-import Control.Applicative.Indexed (IndexedFunctor(imap))
+import Data.Bifunctor        (Bifunctor(bimap))
 import Control.Monad.Trans   (lift)
 import Numeric               (readDec, readFloat, readSigned)
 import Text.Reform.Result (FormRange, Result(..))
@@ -59,7 +59,7 @@ transform :: (Monad m) =>
              Form m input error view anyProof a
           -> Proof m error proof a b
           -> Form m input error view () b
-transform frm proof = imap (const ()) id (frm `prove` proof)
+transform frm proof = bimap (const ()) id (frm `prove` proof)
 
 -- | transform the 'Form' result using a monadic 'Either' function.
 transformEitherM :: (Monad m) => Form m input error view anyProof a
