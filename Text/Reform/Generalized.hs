@@ -19,7 +19,7 @@ import Text.Reform.Backend
 import Text.Reform.Core
 import Text.Reform.Result
 
--- | used for constructing elements like @\<input type=\"text\"\>@, which return a single input value.
+-- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.
 input
   :: (Monad m, FormError error)
   => (input -> Either error a)
@@ -32,9 +32,9 @@ input fromInput toView initialValue =
     v <- getFormInput' i
     case v of
       Default ->
-        return
+        pure
           ( View $ const $ toView i initialValue
-          , return $
+          , pure $
             Ok
               ( Proved
                 { proofs = ()
@@ -44,9 +44,9 @@ input fromInput toView initialValue =
               )
           )
       (Found (fromInput -> (Right a))) ->
-        return
+        pure
           ( View $ const $ toView i a
-          , return $
+          , pure $
             Ok
               ( Proved
                 { proofs = ()
@@ -56,14 +56,14 @@ input fromInput toView initialValue =
               )
           )
       (Found (fromInput -> (Left error))) ->
-        return
+        pure
           ( View $ const $ toView i initialValue
-          , return $ Error [(unitRange i, error)]
+          , pure $ Error [(unitRange i, error)]
           )
       Missing ->
-        return
+        pure
           ( View $ const $ toView i initialValue
-          , return $ Error [(unitRange i, commonFormError (InputMissing i))]
+          , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
           )
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
@@ -79,9 +79,9 @@ inputMaybe fromInput toView initialValue =
     v <- getFormInput' i
     case v of
       Default ->
-        return
+        pure
           ( View $ const $ toView i initialValue
-          , return $
+          , pure $
             Ok
               ( Proved
                 { proofs = ()
@@ -91,9 +91,9 @@ inputMaybe fromInput toView initialValue =
               )
           )
       (Found (fromInput -> (Right a))) ->
-        return
+        pure
           ( View $ const $ toView i a
-          , return $
+          , pure $
             Ok
               ( Proved
                 { proofs = ()
@@ -103,14 +103,14 @@ inputMaybe fromInput toView initialValue =
               )
           )
       (Found (fromInput -> (Left error))) ->
-        return
+        pure
           ( View $ const $ toView i initialValue
-          , return $ Error [(unitRange i, error)]
+          , pure $ Error [(unitRange i, error)]
           )
       Missing ->
-        return
+        pure
           ( View $ const $ toView i initialValue
-          , return $
+          , pure $
             Ok
               ( Proved
                 { proofs = ()
@@ -129,9 +129,9 @@ inputNoData
 inputNoData toView a =
   Form $ do
     i <- getFormId
-    return
+    pure
       ( View $ const $ toView i a
-      , return $
+      , pure $
         Ok
           ( Proved
             { proofs = ()
@@ -152,14 +152,14 @@ inputFile toView =
     v <- getFormInput' i
     case v of
       Default ->
-        return
+        pure
           ( View $ const $ toView i
-          , return $ Error [(unitRange i, commonFormError (InputMissing i))]
+          , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
           )
       (Found (getInputFile' -> (Right a))) ->
-        return
+        pure
           ( View $ const $ toView i
-          , return $
+          , pure $
             Ok
               ( Proved
                 { proofs = ()
@@ -169,14 +169,14 @@ inputFile toView =
               )
           )
       (Found (getInputFile' -> (Left error))) ->
-        return
+        pure
           ( View $ const $ toView i
-          , return $ Error [(unitRange i, error)]
+          , pure $ Error [(unitRange i, error)]
           )
       Missing ->
-        return
+        pure
           ( View $ const $ toView i
-          , return $ Error [(unitRange i, commonFormError (InputMissing i))]
+          , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
           )
   where
     -- just here for the type-signature to make the type-checker happy
@@ -217,7 +217,7 @@ inputMulti choices mkView isSelected =
         do
           let readDec' str = case readDec str of
                 [(n, [])] -> n
-                _ -> (-1) -- FIXME: should probably return an internal error?
+                _ -> (-1) -- FIXME: should probably pure an internal error?
               keys = IS.fromList $ map readDec' $ getInputStrings v
               (choices', vals) =
                 foldr
@@ -238,7 +238,7 @@ inputMulti choices mkView isSelected =
       do
         incFormId
         i <- getFormId
-        return (i, vl, lbl, checked)
+        pure (i, vl, lbl, checked)
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
@@ -268,7 +268,7 @@ inputChoice isDefault choices mkView =
           let readDec' :: String -> Int
               readDec' str = case readDec str of
                 [(n, [])] -> n
-                _ -> (-1) -- FIXME: should probably return an internal error?
+                _ -> (-1) -- FIXME: should probably pure an internal error?
               (Right str) = getInputString v :: Either error String -- FIXME
               key = readDec' str
               (choices', mval) =
@@ -283,17 +283,17 @@ inputChoice isDefault choices mkView =
           view <- mkView i <$> augmentChoices choices'
           case mval of
             Nothing ->
-              return
+              pure
                 ( View $ const $ view
-                , return $ Error [(unitRange i, commonFormError (InputMissing i))]
+                , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
                 )
             (Just val) -> mkOk i view val
   where
     mkOk' i view (Just val) = mkOk i view val
     mkOk' i view Nothing =
-      return
+      pure
         ( View $ const $ view
-        , return $ Error [(unitRange i, commonFormError MissingDefaultValue)]
+        , pure $ Error [(unitRange i, commonFormError MissingDefaultValue)]
         )
     markSelected :: [(a, lbl)] -> ([(a, lbl, Bool)], Maybe a)
     markSelected cs =
@@ -312,7 +312,7 @@ inputChoice isDefault choices mkView =
       do
         incFormId
         i <- getFormId
-        return (i, vl, lbl, selected)
+        pure (i, vl, lbl, selected)
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoiceForms
@@ -342,7 +342,7 @@ inputChoiceForms def choices mkView =
         do
           let readDec' str = case readDec str of
                 [(n, [])] -> n
-                _ -> (-1) -- FIXME: should probably return an internal error?
+                _ -> (-1) -- FIXME: should probably pure an internal error?
               (Right str) = getInputString v :: Either error String -- FIXME
               key = readDec' str
           choices' <- augmentChoices $ markSelected key (zip [0..] choices)
@@ -356,19 +356,19 @@ inputChoiceForms def choices mkView =
                     res' <- lift $ lift mres
                     case res' of
                       (Ok ok) -> do
-                        return (((fid, val, iview, unView v [], lbl, selected) : views), return res')
+                        pure (((fid, val, iview, unView v [], lbl, selected) : views), pure res')
                       (Error errs) -> do
-                        return (((fid, val, iview, unView v errs, lbl, selected) : views), return res')
+                        pure (((fid, val, iview, unView v errs, lbl, selected) : views), pure res')
                 else do
                     (v, _) <- unForm frm
-                    return ((fid, val, iview, unView v [], lbl, selected) : views, res)
+                    pure ((fid, val, iview, unView v [], lbl, selected) : views, res)
               )
-              ([], return $ Error [(unitRange i, commonFormError (InputMissing i))])
+              ([], pure $ Error [(unitRange i, commonFormError (InputMissing i))])
               (choices')
           let view = mkView i (reverse choices'')
-          return (View (const view), mres)
+          pure (View (const view), mres)
   where
-    -- | Utility Function: turn a view and return value into a successful 'FormState'
+    -- | Utility Function: turn a view and pure value into a successful 'FormState'
     mkOk'
       :: (Monad m)
       => FormId
@@ -376,9 +376,9 @@ inputChoiceForms def choices mkView =
       -> a
       -> FormState m input (View error view, m (Result error (Proved proof a)))
     mkOk' i view val =
-      return
+      pure
         ( View $ const $ view
-        , return $ Error []
+        , pure $ Error []
         )
     selectFirst :: [(Form m input error view proof a, lbl)] -> [(Form m input error view proof a, lbl, Bool)]
     selectFirst ((frm, lbl) : fs) = (frm, lbl, True) : map (\(frm', lbl') -> (frm', lbl', False)) fs
@@ -390,7 +390,7 @@ inputChoiceForms def choices mkView =
       do
         incFormId
         (v, _) <- unForm frm
-        return (fid, vl, iview, unView v [], lbl, selected)
+        pure (fid, vl, iview, unView v [], lbl, selected)
     augmentChoices :: (Monad m) => [(Form m input error view proof a, lbl, Bool)] -> FormState m input [(FormId, Int, FormId, Form m input error view proof a, lbl, Bool)]
     augmentChoices choices = mapM augmentChoice (zip [0..] choices)
     augmentChoice :: (Monad m) => (Int, (Form m input error view proof a, lbl, Bool)) -> FormState m input (FormId, Int, FormId, Form m input error view proof a, lbl, Bool)
@@ -400,14 +400,14 @@ inputChoiceForms def choices mkView =
         i <- getFormId
         incFormId
         iview <- getFormId
-        return (i, vl, iview, frm, lbl, selected)
+        pure (i, vl, iview, frm, lbl, selected)
 
 {-
               case inp of
                 (Found v) ->
                     do let readDec' str = case readDec str of
                                             [(n,[])] -> n
-                                            _ -> (-1) -- FIXME: should probably return an internal error?
+                                            _ -> (-1) -- FIXME: should probably pure an internal error?
                            (Right str) = getInputString v :: Either error String -- FIXME
                            key = readDec' str
                            (choices', mval) =
@@ -428,9 +428,9 @@ label
 label f =
   Form $ do
     id' <- getFormId
-    return
+    pure
       ( View (const $ f id')
-      , return
+      , pure
         ( Ok $ Proved
           { proofs = ()
           , pos = unitRange id'
@@ -451,9 +451,9 @@ errors
 errors f =
   Form $ do
     range <- getFormRange
-    return
+    pure
       ( View (f . retainErrors range)
-      , return
+      , pure
         ( Ok $ Proved
           { proofs = ()
           , pos = range
@@ -470,9 +470,9 @@ childErrors
 childErrors f =
   Form $ do
     range <- getFormRange
-    return
+    pure
       ( View (f . retainChildErrors range)
-      , return
+      , pure
         ( Ok $ Proved
           { proofs = ()
           , pos = range

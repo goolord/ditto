@@ -42,16 +42,16 @@ prove (Form frm) (Proof p f) =
     (xml, mval) <- frm
     val <- lift $ lift $ mval
     case val of
-      (Error errs) -> return (xml, return $ Error errs)
+      (Error errs) -> pure (xml, pure $ Error errs)
       (Ok (Proved _ pos a)) ->
         do
           r <- lift $ lift $ f a
           case r of
-            (Left err) -> return (xml, return $ Error [(pos, err)])
+            (Left err) -> pure (xml, pure $ Error [(pos, err)])
             (Right b) ->
-              return
+              pure
                 ( xml
-                , return $
+                , pure $
                   Ok
                     ( Proved
                       { proofs = p
@@ -87,7 +87,7 @@ transformEither
   => Form m input error view anyProof a
   -> (a -> Either error b)
   -> Form m input error view () b
-transformEither frm func = transformEitherM frm (return . func)
+transformEither frm func = transformEitherM frm (pure . func)
 
 -- * Various Proofs
 
@@ -96,7 +96,7 @@ data NotNull = NotNull
 
 -- | prove that a list is not empty
 notNullProof :: (Monad m) => error -> Proof m error NotNull [a] [a]
-notNullProof errorMsg = Proof NotNull (return . check)
+notNullProof errorMsg = Proof NotNull (pure . check)
   where
     check list =
       if null list
@@ -117,7 +117,7 @@ decimal
   :: (Monad m, Eq i, Num i)
   => (String -> error) -- ^ create an error message ('String' is the value that did not parse)
   -> Proof m error Decimal String i
-decimal mkError = Proof Decimal (return . toDecimal)
+decimal mkError = Proof Decimal (pure . toDecimal)
   where
     toDecimal str =
       case readDec str of
@@ -126,7 +126,7 @@ decimal mkError = Proof Decimal (return . toDecimal)
 
 -- | read signed decimal number
 signedDecimal :: (Monad m, Eq i, Real i) => (String -> error) -> Proof m error (Signed Decimal) String i
-signedDecimal mkError = Proof (Signed Decimal) (return . toDecimal)
+signedDecimal mkError = Proof (Signed Decimal) (pure . toDecimal)
   where
     toDecimal str =
       case (readSigned readDec) str of
@@ -135,7 +135,7 @@ signedDecimal mkError = Proof (Signed Decimal) (return . toDecimal)
 
 -- | read 'RealFrac' number
 realFrac :: (Monad m, RealFrac a) => (String -> error) -> Proof m error RealFractional String a
-realFrac mkError = Proof RealFractional (return . toRealFrac)
+realFrac mkError = Proof RealFractional (pure . toRealFrac)
   where
     toRealFrac str =
       case readFloat str of
@@ -144,7 +144,7 @@ realFrac mkError = Proof RealFractional (return . toRealFrac)
 
 -- | read a signed 'RealFrac' number
 realFracSigned :: (Monad m, RealFrac a) => (String -> error) -> Proof m error (Signed RealFractional) String a
-realFracSigned mkError = Proof (Signed RealFractional) (return . toRealFrac)
+realFracSigned mkError = Proof (Signed RealFractional) (pure . toRealFrac)
   where
     toRealFrac str =
       case (readSigned readFloat) str of
