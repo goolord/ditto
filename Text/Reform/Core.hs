@@ -31,8 +31,7 @@ data Proved proofs a
   deriving Show
 
 instance Functor (Proved ()) where
-
-  fmap f (Proved () pos a) = Proved () pos (f a)
+  fmap f (Proved () posi a) = Proved () posi (f a)
 
 -- | Utility Function: trivially prove nothing about ()
 unitProved :: FormId -> Proved () ()
@@ -102,6 +101,7 @@ instance (SG.Semigroup input, Monad m) => SG.Semigroup (Environment m input) whe
           (Missing, Missing) -> pure Missing
           (Default, Missing) -> pure Default
           (Missing, Default) -> pure Default
+          (Default, Default) -> pure Default
           (Found x, Found y) -> pure $ Found (x SG.<> y)
           (Found x, _) -> pure $ Found x
           (_, Found y) -> pure $ Found y
@@ -137,7 +137,6 @@ newtype View error v
   deriving (SG.Semigroup, Monoid)
 
 instance Functor (View e) where
-
   fmap f (View g) = View $ f . g
 
 ------------------------------------------------------------------------------
@@ -172,17 +171,15 @@ instance Functor (View e) where
 newtype Form m input error view proof a = Form {unForm :: FormState m input (View error view, m (Result error (Proved proof a)))}
 
 instance (Monad m) => Bifunctor (Form m input view error) where
-
   bimap f g (Form frm) =
     Form $ do
-      (view, mval) <- frm
+      (view1, mval) <- frm
       val <- lift $ lift $ mval
       case val of
-        (Ok (Proved p pos a)) -> pure (view, pure $ Ok (Proved (f p) pos (g a)))
-        (Error errs) -> pure (view, pure $ Error errs)
+        (Ok (Proved p posi a)) -> pure (view1, pure $ Ok (Proved (f p) posi (g a)))
+        (Error errs) -> pure (view1, pure $ Error errs)
 
 instance (Monoid view, Monad m) => Biapplicative (Form m input error view) where
-
   bipure p a =
     Form $ do
       i <- getFormId
@@ -221,12 +218,10 @@ bracketState k = do
   pure res
 
 instance (Functor m) => Functor (Form m input error view ()) where
-
   fmap f form =
     Form $ fmap (second (fmap (fmap (fmap f)))) (unForm form)
 
 instance (Functor m, Monoid view, Monad m) => Applicative (Form m input error view ()) where
-
   pure a =
     Form $ do
       i <- getFormId
@@ -254,7 +249,7 @@ instance (Functor m, Monoid view, Monad m) => Applicative (Form m input error vi
         (Error errs1, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs1 ++ errs2)
         (Error errs1, _) -> pure (view1 `mappend` view2, pure $ Error $ errs1)
         (_, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs2)
-        (Ok (Proved p (FormRange x _) f), Ok (Proved q (FormRange _ y) a)) ->
+        (Ok (Proved _ (FormRange x _) f), Ok (Proved _ (FormRange _ y) a)) ->
           pure
             ( view1 `mappend` view2
             , pure $ Ok $ Proved
@@ -404,9 +399,9 @@ mkOk
   -> view
   -> a
   -> FormState m input (View error view, m (Result error (Proved () a)))
-mkOk i view val =
+mkOk i view' val =
   pure
-    ( View $ const $ view
+    ( View $ const $ view'
     , pure $
       Ok
         ( Proved

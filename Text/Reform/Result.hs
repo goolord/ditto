@@ -62,6 +62,7 @@ data FormId
       , -- | Stack indicating field. Head is most specific to this item
         formIdList :: [Integer]
       }
+  | FormIdCustom String
   deriving (Eq, Ord)
 
 -- | The zero ID, i.e. the first ID that is usable
@@ -75,11 +76,12 @@ zeroId p = FormId
 -- | map a function over the @[Integer]@ inside a 'FormId'
 mapId :: ([Integer] -> [Integer]) -> FormId -> FormId
 mapId f (FormId p is) = FormId p $ f is
+mapId _ x = x
 
 instance Show FormId where
-
   show (FormId p xs) =
     p ++ "-fval[" ++ (intercalate "." $ reverse $ map show xs) ++ "]"
+  show (FormIdCustom x) = x
 
 -- | get the head 'Integer' from a 'FormId'
 formId :: FormId -> Integer
@@ -96,6 +98,7 @@ data FormRange
 incrementFormId :: FormId -> FormId
 incrementFormId (FormId p (x : xs)) = FormId p $ (x + 1) : xs
 incrementFormId (FormId _ []) = error "Bad FormId list"
+incrementFormId x@FormIdCustom{} = x
 
 -- | create a 'FormRange' from a 'FormId'
 unitRange :: FormId -> FormRange

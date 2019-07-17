@@ -1,31 +1,28 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE DoAndIfThenElse #-}
 
-{- |
-This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
--}
+-- This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
+
 module Text.Reform.Generalized where
 
 import Control.Applicative ((<$>))
 import Control.Monad (foldM)
 import Control.Monad.Trans (lift)
-import qualified Data.IntSet as IS
-import Data.List (find)
-import Data.Maybe (mapMaybe)
+import Data.Bifunctor
 import Numeric (readDec)
 import Text.Reform.Backend
 import Text.Reform.Core
 import Text.Reform.Result
+import qualified Data.IntSet as IS
 
 -- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.
 input
-  :: (Monad m, FormError error)
-  => (input -> Either error a)
+  :: (Monad m, FormError err)
+  => (input -> Either err a)
   -> (FormId -> a -> view)
   -> a
-  -> Form m input error view () a
+  -> Form m input err view () a
 input fromInput toView initialValue =
   Form $ do
     i <- getFormId
@@ -43,8 +40,8 @@ input fromInput toView initialValue =
                 }
               )
           )
-      (Found (fromInput -> (Right a))) ->
-        pure
+      Found x -> case fromInput x of 
+        Right a -> pure
           ( View $ const $ toView i a
           , pure $
             Ok
@@ -55,31 +52,28 @@ input fromInput toView initialValue =
                 }
               )
           )
-      (Found (fromInput -> (Left error))) ->
-        pure
+        Left err -> pure
           ( View $ const $ toView i initialValue
-          , pure $ Error [(unitRange i, error)]
+          , pure $ Error [(unitRange i, err)]
           )
-      Missing ->
-        pure
-          ( View $ const $ toView i initialValue
-          , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
-          )
+      Missing -> pure
+        ( View $ const $ toView i initialValue
+        , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
+        )
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
 inputMaybe
-  :: (Monad m, FormError error)
-  => (input -> Either error a)
+  :: (Monad m, FormError err)
+  => (input -> Either err a)
   -> (FormId -> a -> view)
   -> a
-  -> Form m input error view () (Maybe a)
+  -> Form m input err view () (Maybe a)
 inputMaybe fromInput toView initialValue =
   Form $ do
     i <- getFormId
     v <- getFormInput' i
     case v of
-      Default ->
-        pure
+      Default -> pure
           ( View $ const $ toView i initialValue
           , pure $
             Ok
@@ -90,8 +84,8 @@ inputMaybe fromInput toView initialValue =
                 }
               )
           )
-      (Found (fromInput -> (Right a))) ->
-        pure
+      Found x -> case fromInput x of
+        Right a -> pure
           ( View $ const $ toView i a
           , pure $
             Ok
@@ -102,13 +96,11 @@ inputMaybe fromInput toView initialValue =
                 }
               )
           )
-      (Found (fromInput -> (Left error))) ->
-        pure
+        Left err -> pure
           ( View $ const $ toView i initialValue
-          , pure $ Error [(unitRange i, error)]
+          , pure $ Error [(unitRange i, err)]
           )
-      Missing ->
-        pure
+      Missing -> pure
           ( View $ const $ toView i initialValue
           , pure $
             Ok
@@ -125,7 +117,7 @@ inputNoData
   :: (Monad m)
   => (FormId -> a -> view)
   -> a
-  -> Form m input error view () ()
+  -> Form m input err view () ()
 inputNoData toView a =
   Form $ do
     i <- getFormId
@@ -143,9 +135,9 @@ inputNoData toView a =
 
 -- | used for @\<input type=\"file\"\>@
 inputFile
-  :: forall m input error view. (Monad m, FormInput input, FormError error, ErrorInputType error ~ input)
+  :: forall m input err view. (Monad m, FormInput input, FormError err, ErrorInputType err ~ input)
   => (FormId -> view)
-  -> Form m input error view () (FileType input)
+  -> Form m input err view () (FileType input)
 inputFile toView =
   Form $ do
     i <- getFormId
@@ -156,8 +148,8 @@ inputFile toView =
           ( View $ const $ toView i
           , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
           )
-      (Found (getInputFile' -> (Right a))) ->
-        pure
+      Found x -> case getInputFile' x of
+        Right a -> pure
           ( View $ const $ toView i
           , pure $
             Ok
@@ -168,10 +160,9 @@ inputFile toView =
                 }
               )
           )
-      (Found (getInputFile' -> (Left error))) ->
-        pure
+        Left err -> pure
           ( View $ const $ toView i
-          , pure $ Error [(unitRange i, error)]
+          , pure $ Error [(unitRange i, err)]
           )
       Missing ->
         pure
@@ -180,16 +171,16 @@ inputFile toView =
           )
   where
     -- just here for the type-signature to make the type-checker happy
-    getInputFile' :: (FormError error, ErrorInputType error ~ input) => input -> Either error (FileType input)
+    getInputFile' :: (FormError err, ErrorInputType err ~ input) => input -> Either err (FileType input)
     getInputFile' = getInputFile
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
 inputMulti
-  :: forall m input error view a lbl. (Functor m, FormError error, ErrorInputType error ~ input, FormInput input, Monad m)
+  :: forall m input err view a lbl. (Functor m, FormError err, ErrorInputType err ~ input, FormInput input, Monad m)
   => [(a, lbl)] -- ^ value, label, initially checked
   -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
   -> (a -> Bool) -- ^ isChecked/isSelected initially
-  -> Form m input error view () [a]
+  -> Form m input err view () [a]
 inputMulti choices mkView isSelected =
   Form $ do
     i <- getFormId
@@ -206,35 +197,34 @@ inputMulti choices mkView isSelected =
                   )
                   ([], [])
                   choices
-          view <- mkView i <$> augmentChoices choices'
-          mkOk i view vals
+          view' <- mkView i <$> augmentChoices choices'
+          mkOk i view' vals
       Missing ->
         -- just means that no checkboxes were checked
         do
-          view <- mkView i <$> augmentChoices (map (\(x, y) -> (x, y, False)) choices)
-          mkOk i view []
-      (Found v) ->
-        do
-          let readDec' str = case readDec str of
-                [(n, [])] -> n
-                _ -> (-1) -- FIXME: should probably pure an internal error?
-              keys = IS.fromList $ map readDec' $ getInputStrings v
-              (choices', vals) =
-                foldr
-                  ( \(i, (a, lbl)) (c, v) ->
-                    if IS.member i keys
-                    then ((a, lbl, True) : c, a : v)
-                    else ((a, lbl, False) : c, v)
-                  )
-                  ([], []) $
-                  zip [0..] choices
-          view <- mkView i <$> augmentChoices choices'
-          mkOk i view vals
+          view' <- mkView i <$> augmentChoices (map (\(x, y) -> (x, y, False)) choices)
+          mkOk i view' []
+      Found v -> do
+        let readDec' str = case readDec str of
+              [(n, [])] -> n
+              _ -> (-1) -- FIXME: should probably pure an internal err?
+            keys = IS.fromList $ map readDec' $ getInputStrings v
+            (choices', vals) =
+              foldr
+                ( \(i0, (a, lbl)) (c, v0) ->
+                  if IS.member i0 keys
+                  then ((a, lbl, True) : c, a : v0)
+                  else ((a, lbl, False) : c, v0)
+                )
+                ([], []) $
+                zip [0..] choices
+        view' <- mkView i <$> augmentChoices choices'
+        mkOk i view' vals
   where
     augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m input [(FormId, Int, lbl, Bool)]
-    augmentChoices choices = mapM augmentChoice (zip [0..] choices)
+    augmentChoices choices' = mapM augmentChoice (zip [0..] choices')
     augmentChoice :: (Monad m) => (Int, (a, lbl, Bool)) -> FormState m input (FormId, Int, lbl, Bool)
-    augmentChoice (vl, (a, lbl, checked)) =
+    augmentChoice (vl, (_, lbl, checked)) =
       do
         incFormId
         i <- getFormId
@@ -242,11 +232,11 @@ inputMulti choices mkView isSelected =
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
-  :: forall a m error input lbl view. (Functor m, FormError error, ErrorInputType error ~ input, FormInput input, Monad m)
+  :: forall a m err input lbl view. (Functor m, FormError err, ErrorInputType err ~ input, FormInput input, Monad m)
   => (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
   -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
-  -> Form m input error view () a
+  -> Form m input err view () a
 inputChoice isDefault choices mkView =
   Form $ do
     i <- getFormId
@@ -255,44 +245,44 @@ inputChoice isDefault choices mkView =
       Default ->
         do
           let (choices', def) = markSelected choices
-          view <- mkView i <$> augmentChoices choices'
-          mkOk' i view def
+          view' <- mkView i <$> augmentChoices choices'
+          mkOk' i view' def
       Missing ->
         -- can happen if no choices where checked
         do
           let (choices', def) = markSelected choices
-          view <- mkView i <$> augmentChoices choices'
-          mkOk' i view def
-      (Found v) ->
+          view' <- mkView i <$> augmentChoices choices'
+          mkOk' i view' def
+      Found v ->
         do
           let readDec' :: String -> Int
-              readDec' str = case readDec str of
+              readDec' str' = case readDec str' of
                 [(n, [])] -> n
-                _ -> (-1) -- FIXME: should probably pure an internal error?
-              (Right str) = getInputString v :: Either error String -- FIXME
-              key = readDec' str
+                _ -> (-1) -- FIXME: should probably pure an internal err?
+              estr = getInputString v :: Either err String
+              key = second readDec' estr
               (choices', mval) =
                 foldr
-                  ( \(i, (a, lbl)) (c, v) ->
-                    if i == key
+                  ( \(i0, (a, lbl)) (c, v0) ->
+                    if either (const False) (==i0) key
                     then ((a, lbl, True) : c, Just a)
-                    else ((a, lbl, False) : c, v)
+                    else ((a, lbl, False) : c, v0)
                   )
                   ([], Nothing) $
                   zip [0..] choices
-          view <- mkView i <$> augmentChoices choices'
+          view' <- mkView i <$> augmentChoices choices'
           case mval of
             Nothing ->
               pure
-                ( View $ const $ view
+                ( View $ const view'
                 , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
                 )
-            (Just val) -> mkOk i view val
+            (Just val) -> mkOk i view' val
   where
-    mkOk' i view (Just val) = mkOk i view val
-    mkOk' i view Nothing =
+    mkOk' i view' (Just val) = mkOk i view' val
+    mkOk' i view' Nothing =
       pure
-        ( View $ const $ view
+        ( View $ const $ view'
         , pure $ Error [(unitRange i, commonFormError MissingDefaultValue)]
         )
     markSelected :: [(a, lbl)] -> ([(a, lbl, Bool)], Maybe a)
@@ -306,7 +296,7 @@ inputChoice isDefault choices mkView =
         ([], Nothing)
         cs
     augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m input [(FormId, Int, lbl, Bool)]
-    augmentChoices choices = mapM augmentChoice (zip [0..] choices)
+    augmentChoices choices' = mapM augmentChoice (zip [0..] choices')
     augmentChoice :: (Monad m) => (Int, (a, lbl, Bool)) -> FormState m input (FormId, Int, lbl, Bool)
     augmentChoice (vl, (_a, lbl, selected)) =
       do
@@ -316,11 +306,11 @@ inputChoice isDefault choices mkView =
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoiceForms
-  :: forall a m error input lbl view proof. (Functor m, Monad m, FormError error, ErrorInputType error ~ input, FormInput input)
+  :: forall a m err input lbl view proof. (Functor m, Monad m, FormError err, ErrorInputType err ~ input, FormInput input)
   => a
-  -> [(Form m input error view proof a, lbl)] -- ^ value, label
+  -> [(Form m input err view proof a, lbl)] -- ^ value, label
   -> (FormId -> [(FormId, Int, FormId, view, lbl, Bool)] -> view) -- ^ function which generates the view
-  -> Form m input error view proof a
+  -> Form m input err view proof a
 inputChoiceForms def choices mkView =
   Form $ do
     i <- getFormId -- id used for the 'name' attribute of the radio buttons
@@ -330,21 +320,21 @@ inputChoiceForms def choices mkView =
         -- produce view for GET request
         do
           choices' <- mapM viewSubForm =<< augmentChoices (selectFirst choices)
-          let view = mkView i choices'
-          mkOk' i view def
+          let view' = mkView i choices'
+          mkOk' i view' def
       Missing ->
         -- shouldn't ever happen...
         do
           choices' <- mapM viewSubForm =<< augmentChoices (selectFirst choices)
-          let view = mkView i choices'
-          mkOk' i view def
+          let view' = mkView i choices'
+          mkOk' i view' def
       (Found v) ->
         do
-          let readDec' str = case readDec str of
+          let readDec' str' = case readDec str' of
                 [(n, [])] -> n
-                _ -> (-1) -- FIXME: should probably pure an internal error?
-              (Right str) = getInputString v :: Either error String -- FIXME
-              key = readDec' str
+                _ -> (-1) -- FIXME: should probably pure an internal err?
+              estr = getInputString v :: Either err String
+              key = second readDec' estr
           choices' <- augmentChoices $ markSelected key (zip [0..] choices)
           (choices'', mres) <-
             foldM
@@ -352,21 +342,21 @@ inputChoiceForms def choices mkView =
                 incFormId
                 if selected
                 then do
-                    (v, mres) <- unForm frm
+                    (v0, mres) <- unForm frm
                     res' <- lift $ lift mres
                     case res' of
-                      (Ok ok) -> do
-                        pure (((fid, val, iview, unView v [], lbl, selected) : views), pure res')
-                      (Error errs) -> do
-                        pure (((fid, val, iview, unView v errs, lbl, selected) : views), pure res')
+                      Ok{} -> do
+                        pure (((fid, val, iview, unView v0 [], lbl, selected) : views), pure res')
+                      Error errs -> do
+                        pure (((fid, val, iview, unView v0 errs, lbl, selected) : views), pure res')
                 else do
-                    (v, _) <- unForm frm
-                    pure ((fid, val, iview, unView v [], lbl, selected) : views, res)
+                    (v0, _) <- unForm frm
+                    pure ((fid, val, iview, unView v0 [], lbl, selected) : views, res)
               )
               ([], pure $ Error [(unitRange i, commonFormError (InputMissing i))])
               (choices')
-          let view = mkView i (reverse choices'')
-          pure (View (const view), mres)
+          let view' = mkView i (reverse choices'')
+          pure (View (const view'), mres)
   where
     -- | Utility Function: turn a view and pure value into a successful 'FormState'
     mkOk'
@@ -374,26 +364,27 @@ inputChoiceForms def choices mkView =
       => FormId
       -> view
       -> a
-      -> FormState m input (View error view, m (Result error (Proved proof a)))
-    mkOk' i view val =
+      -> FormState m input (View err view, m (Result err (Proved proof a)))
+    mkOk' _ view' _ =
       pure
-        ( View $ const $ view
+        ( View $ const view'
         , pure $ Error []
         )
-    selectFirst :: [(Form m input error view proof a, lbl)] -> [(Form m input error view proof a, lbl, Bool)]
+    selectFirst :: [(Form m input err view proof a, lbl)] -> [(Form m input err view proof a, lbl, Bool)]
     selectFirst ((frm, lbl) : fs) = (frm, lbl, True) : map (\(frm', lbl') -> (frm', lbl', False)) fs
-    markSelected :: Int -> [(Int, (Form m input error view proof a, lbl))] -> [(Form m input error view proof a, lbl, Bool)]
-    markSelected n choices =
-      map (\(i, (f, lbl)) -> (f, lbl, i == n)) choices
-    viewSubForm :: (FormId, Int, FormId, Form m input error view proof a, lbl, Bool) -> FormState m input (FormId, Int, FormId, view, lbl, Bool)
+    selectFirst [] = []
+    markSelected :: Either e Int -> [(Int, (Form m input err view proof a, lbl))] -> [(Form m input err view proof a, lbl, Bool)]
+    markSelected en choices' =
+      map (\(i, (f, lbl)) -> (f, lbl, either (const False) (==i) en)) choices'
+    viewSubForm :: (FormId, Int, FormId, Form m input err view proof a, lbl, Bool) -> FormState m input (FormId, Int, FormId, view, lbl, Bool)
     viewSubForm (fid, vl, iview, frm, lbl, selected) =
       do
         incFormId
         (v, _) <- unForm frm
         pure (fid, vl, iview, unView v [], lbl, selected)
-    augmentChoices :: (Monad m) => [(Form m input error view proof a, lbl, Bool)] -> FormState m input [(FormId, Int, FormId, Form m input error view proof a, lbl, Bool)]
-    augmentChoices choices = mapM augmentChoice (zip [0..] choices)
-    augmentChoice :: (Monad m) => (Int, (Form m input error view proof a, lbl, Bool)) -> FormState m input (FormId, Int, FormId, Form m input error view proof a, lbl, Bool)
+    augmentChoices :: (Monad m) => [(Form m input err view proof a, lbl, Bool)] -> FormState m input [(FormId, Int, FormId, Form m input err view proof a, lbl, Bool)]
+    augmentChoices choices' = mapM augmentChoice (zip [0..] choices')
+    augmentChoice :: (Monad m) => (Int, (Form m input err view proof a, lbl, Bool)) -> FormState m input (FormId, Int, FormId, Form m input err view proof a, lbl, Bool)
     augmentChoice (vl, (frm, lbl, selected)) =
       do
         incFormId
@@ -407,8 +398,8 @@ inputChoiceForms def choices mkView =
                 (Found v) ->
                     do let readDec' str = case readDec str of
                                             [(n,[])] -> n
-                                            _ -> (-1) -- FIXME: should probably pure an internal error?
-                           (Right str) = getInputString v :: Either error String -- FIXME
+                                            _ -> (-1) -- FIXME: should probably pure an internal err?
+                           (Right str) = getInputString v :: Either err String -- FIXME
                            key = readDec' str
                            (choices', mval) =
                                foldr (\(i, (a, lbl)) (c, v) ->
@@ -424,7 +415,7 @@ inputChoiceForms def choices mkView =
 label
   :: Monad m
   => (FormId -> view)
-  -> Form m input error view () ()
+  -> Form m input err view () ()
 label f =
   Form $ do
     id' <- getFormId
@@ -439,15 +430,15 @@ label f =
         )
       )
 
--- | used to add a list of error messages to a 'Form'
+-- | used to add a list of err messages to a 'Form'
 --
 -- This function automatically takes care of extracting only the
 -- errors that are relevent to the form element it is attached to via
 -- '<++' or '++>'.
 errors
   :: Monad m
-  => ([error] -> view) -- ^ function to convert the error messages into a view
-  -> Form m input error view () ()
+  => ([err] -> view) -- ^ function to convert the err messages into a view
+  -> Form m input err view () ()
 errors f =
   Form $ do
     range <- getFormRange
@@ -462,11 +453,11 @@ errors f =
         )
       )
 
--- | similar to 'errors' but includes error messages from children of the form as well.
+-- | similar to 'errors' but includes err messages from children of the form as well.
 childErrors
   :: Monad m
-  => ([error] -> view)
-  -> Form m input error view () ()
+  => ([err] -> view)
+  -> Form m input err view () ()
 childErrors f =
   Form $ do
     range <- getFormRange

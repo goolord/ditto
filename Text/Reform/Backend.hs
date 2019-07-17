@@ -9,10 +9,9 @@ The 'FormError' class is used to map error messages into an application specific
 -}
 module Text.Reform.Backend where
 
-import Data.Maybe (listToMaybe)
 import Data.Text (Text)
-import qualified Data.Text as T
 import Text.Reform.Result (FormId)
+import qualified Data.Text as T
 
 -- | an error type used to represent errors that are common to all backends
 --

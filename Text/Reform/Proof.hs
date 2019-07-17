@@ -13,7 +13,7 @@ import Control.Monad.Trans (lift)
 import Data.Bifunctor (Bifunctor (bimap))
 import Numeric (readDec, readFloat, readSigned)
 import Text.Reform.Core (Form (..), Proved (..))
-import Text.Reform.Result (FormRange, Result (..))
+import Text.Reform.Result (Result (..))
 
 -- | A 'Proof' attempts to prove something about a value.
 --
@@ -43,11 +43,11 @@ prove (Form frm) (Proof p f) =
     val <- lift $ lift $ mval
     case val of
       (Error errs) -> pure (xml, pure $ Error errs)
-      (Ok (Proved _ pos a)) ->
+      (Ok (Proved _ posi a)) ->
         do
           r <- lift $ lift $ f a
           case r of
-            (Left err) -> pure (xml, pure $ Error [(pos, err)])
+            (Left err) -> pure (xml, pure $ Error [(posi, err)])
             (Right b) ->
               pure
                 ( xml
@@ -55,7 +55,7 @@ prove (Form frm) (Proof p f) =
                   Ok
                     ( Proved
                       { proofs = p
-                      , pos = pos
+                      , pos = posi
                       , unProved = b
                       }
                     )
