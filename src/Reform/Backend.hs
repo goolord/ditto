@@ -7,10 +7,10 @@ This module contains two classes. 'FormInput' is a class which is parameterized 
 The 'FormError' class is used to map error messages into an application specific error type.
 
 -}
-module Text.Reform.Backend where
+module Reform.Backend where
 
 import Data.Text (Text)
-import Text.Reform.Result (FormId)
+import Reform.Result (FormId)
 import qualified Data.Text as T
 
 -- | an error type used to represent errors that are common to all backends

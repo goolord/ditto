@@ -4,16 +4,16 @@
 
 -- This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
 
-module Text.Reform.Generalized where
+module Reform.Generalized where
 
 import Control.Applicative ((<$>))
 import Control.Monad (foldM)
 import Control.Monad.Trans (lift)
 import Data.Bifunctor
 import Numeric (readDec)
-import Text.Reform.Backend
-import Text.Reform.Core
-import Text.Reform.Result
+import Reform.Backend
+import Reform.Core
+import Reform.Result
 import qualified Data.IntSet as IS
 
 -- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.

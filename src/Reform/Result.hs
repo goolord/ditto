@@ -1,6 +1,6 @@
 -- | Module for the core result type, and related functions
 --
-module Text.Reform.Result
+module Reform.Result
   ( Result (..)
   , getResult
   , FormId
