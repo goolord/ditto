@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 {- |
 This module defines the 'Form' type, its instances, core manipulation functions, and a bunch of helper utilities.
@@ -30,8 +30,8 @@ data Proved proofs a
       }
   deriving Show
 
-instance Functor (Proved ()) where
-  fmap f (Proved () posi a) = Proved () posi (f a)
+instance Functor (Proved p) where
+  fmap f (Proved p posi a) = Proved p posi (f a)
 
 -- | Utility Function: trivially prove nothing about ()
 unitProved :: FormId -> Proved () ()
@@ -217,11 +217,11 @@ bracketState k = do
   put $ FormRange startF1 endF2
   pure res
 
-instance (Functor m) => Functor (Form m input error view ()) where
+instance (Functor m) => Functor (Form m input error view x) where
   fmap f form =
     Form $ fmap (second (fmap (fmap (fmap f)))) (unForm form)
 
-instance (Functor m, Monoid view, Monad m) => Applicative (Form m input error view ()) where
+instance (Functor m, Monoid view, Monad m, x ~ ()) => Applicative (Form m input error view x) where
   pure a =
     Form $ do
       i <- getFormId
