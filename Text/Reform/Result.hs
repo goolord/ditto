@@ -17,8 +17,11 @@ module Text.Reform.Result
   )
 where
 
-import Control.Applicative (Applicative (..))
 import Data.List (intercalate)
+import Control.Applicative (Applicative (..))
+import Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NE
+-- import Data.List (intercalate)
 
 -- | Type for failing computations
 --
@@ -60,7 +63,7 @@ data FormId
       { -- | Global prefix for the form
         formPrefix :: String
       , -- | Stack indicating field. Head is most specific to this item
-        formIdList :: [Integer]
+        formIdList :: NonEmpty Integer
       }
   | FormIdCustom String
   deriving (Eq, Ord)
@@ -70,22 +73,22 @@ data FormId
 zeroId :: String -> FormId
 zeroId p = FormId
   { formPrefix = p
-  , formIdList = [0]
+  , formIdList = pure 0
   }
 
--- | map a function over the @[Integer]@ inside a 'FormId'
-mapId :: ([Integer] -> [Integer]) -> FormId -> FormId
+-- | map a function over the @NonEmpty Integer@ inside a 'FormId'
+mapId :: (NonEmpty Integer -> NonEmpty Integer) -> FormId -> FormId
 mapId f (FormId p is) = FormId p $ f is
 mapId _ x = x
 
 instance Show FormId where
   show (FormId p xs) =
-    p ++ "-fval[" ++ (intercalate "." $ reverse $ map show xs) ++ "]"
+    p ++ "-fval[" ++ (intercalate "." $ reverse $ map show $ NE.toList xs) ++ "]"
   show (FormIdCustom x) = x
 
 -- | get the head 'Integer' from a 'FormId'
 formId :: FormId -> Integer
-formId = head . formIdList
+formId = NE.head . formIdList
 
 -- | A range of ID's to specify a group of forms
 --
@@ -96,8 +99,7 @@ data FormRange
 -- | Increment a form ID
 --
 incrementFormId :: FormId -> FormId
-incrementFormId (FormId p (x : xs)) = FormId p $ (x + 1) : xs
-incrementFormId (FormId _ []) = error "Bad FormId list"
+incrementFormId (FormId p (x :| xs)) = FormId p $ (x + 1) :| xs
 incrementFormId x@FormIdCustom{} = x
 
 -- | create a 'FormRange' from a 'FormId'
