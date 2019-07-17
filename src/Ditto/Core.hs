@@ -10,7 +10,6 @@ import Control.Applicative (Applicative ((<*>), pure))
 import Control.Monad.Reader (MonadReader (ask), ReaderT, runReaderT)
 import Control.Monad.State (MonadState (get, put), StateT, evalStateT)
 import Control.Monad.Trans (lift)
-import Data.Biapplicative (Biapplicative ((<<*>>), bipure))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Monoid (Monoid (mappend, mempty))
 import qualified Data.Semigroup as SG
@@ -22,23 +21,21 @@ import Ditto.Result (FormId (..), FormRange (..), Result (..), unitRange, zeroId
 ------------------------------------------------------------------------------
 
 -- | Proved records a value, the location that value came from, and something that was proved about the value.
-data Proved proofs a
+data Proved a
   = Proved
-      { proofs :: proofs
-      , pos :: FormRange
+      { pos :: FormRange
       , unProved :: a
       }
   deriving Show
 
-instance Functor (Proved p) where
-  fmap f (Proved p posi a) = Proved p posi (f a)
+instance Functor Proved where
+  fmap f (Proved posi a) = Proved posi (f a)
 
 -- | Utility Function: trivially prove nothing about ()
-unitProved :: FormId -> Proved () ()
+unitProved :: FormId -> Proved ()
 unitProved formId =
   Proved
-    { proofs = ()
-    , pos = unitRange formId
+    { pos = unitRange formId
     , unProved = ()
     }
 
@@ -168,46 +165,44 @@ instance Functor (View e) where
 -- @digestive-functors <= 0.2@. If @proof@ is @()@, then 'Form' is an
 -- applicative functor and can be used almost exactly like
 -- @digestive-functors <= 0.2@.
-newtype Form m input error view proof a = Form {unForm :: FormState m input (View error view, m (Result error (Proved proof a)))}
+newtype Form m input error view a = Form {unForm :: FormState m input (View error view, m (Result error (Proved a)))}
 
-instance (Monad m) => Bifunctor (Form m input view error) where
-  bimap f g (Form frm) =
-    Form $ do
-      (view1, mval) <- frm
-      val <- lift $ lift $ mval
-      case val of
-        (Ok (Proved p posi a)) -> pure (view1, pure $ Ok (Proved (f p) posi (g a)))
-        (Error errs) -> pure (view1, pure $ Error errs)
+-- instance (Monad m) => Functor (Form m input view error) where
+--   fmap f (Form frm) =
+--     Form $ do
+--       (view1, mval) <- frm
+--       val <- lift $ lift $ mval
+--       case val of
+--         (Ok (Proved posi a)) -> pure (view1, pure $ Ok (Proved posi (f a)))
+--         (Error errs) -> pure (view1, pure $ Error errs)
 
-instance (Monoid view, Monad m) => Biapplicative (Form m input error view) where
-  bipure p a =
-    Form $ do
-      i <- getFormId
-      pure (mempty, pure $ Ok (Proved p (unitRange i) a))
-
-  (Form frmF) <<*>> (Form frmA) =
-    Form $ do
-      ((view1, mfok), (view2, maok)) <-
-        bracketState $ do
-          res1 <- frmF
-          incFormId
-          res2 <- frmA
-          pure (res1, res2)
-      fok <- lift $ lift $ mfok
-      aok <- lift $ lift $ maok
-      case (fok, aok) of
-        (Error errs1, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs1 ++ errs2)
-        (Error errs1, _) -> pure (view1 `mappend` view2, pure $ Error $ errs1)
-        (_, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs2)
-        (Ok (Proved p (FormRange x _) f), Ok (Proved q (FormRange _ y) a)) ->
-          pure
-            ( view1 `mappend` view2
-            , pure $ Ok $ Proved
-              { proofs = p q
-              , pos = FormRange x y
-              , unProved = f a
-              }
-            )
+-- instance (Monoid view, Monad m) => Applicative (Form m input error view) where
+--   pure a =
+--     Form $ do
+--       i <- getFormId
+--       pure (mempty, pure $ Ok (Proved (unitRange i) a))
+--   (Form frmF) <*> (Form frmA) =
+--     Form $ do
+--       ((view1, mfok), (view2, maok)) <-
+--         bracketState $ do
+--           res1 <- frmF
+--           incFormId
+--           res2 <- frmA
+--           pure (res1, res2)
+--       fok <- lift $ lift $ mfok
+--       aok <- lift $ lift $ maok
+--       case (fok, aok) of
+--         (Error errs1, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs1 ++ errs2)
+--         (Error errs1, _) -> pure (view1 `mappend` view2, pure $ Error $ errs1)
+--         (_, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs2)
+--         (Ok (Proved (FormRange x _) f), Ok (Proved (FormRange _ y) a)) ->
+--           pure
+--             ( view1 `mappend` view2
+--             , pure $ Ok $ Proved
+--               { pos = FormRange x y
+--               , unProved = f a
+--               }
+--             )
 
 bracketState :: Monad m => FormState m input a -> FormState m input a
 bracketState k = do
@@ -217,19 +212,18 @@ bracketState k = do
   put $ FormRange startF1 endF2
   pure res
 
-instance (Functor m) => Functor (Form m input error view x) where
+instance (Functor m) => Functor (Form m input error view) where
   fmap f form =
     Form $ fmap (second (fmap (fmap (fmap f)))) (unForm form)
 
-instance (Functor m, Monoid view, Monad m, x ~ ()) => Applicative (Form m input error view x) where
+instance (Functor m, Monoid view, Monad m, x ~ ()) => Applicative (Form m input error view) where
   pure a =
     Form $ do
       i <- getFormId
       pure
         ( View $ const $ mempty
         , pure $ Ok $ Proved
-          { proofs = ()
-          , pos = FormRange i i
+          { pos = FormRange i i
           , unProved = a
           }
         )
@@ -249,12 +243,11 @@ instance (Functor m, Monoid view, Monad m, x ~ ()) => Applicative (Form m input 
         (Error errs1, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs1 ++ errs2)
         (Error errs1, _) -> pure (view1 `mappend` view2, pure $ Error $ errs1)
         (_, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs2)
-        (Ok (Proved _ (FormRange x _) f), Ok (Proved _ (FormRange _ y) a)) ->
+        (Ok (Proved (FormRange x _) f), Ok (Proved (FormRange _ y) a)) ->
           pure
             ( view1 `mappend` view2
             , pure $ Ok $ Proved
-              { proofs = ()
-              , pos = FormRange x y
+              { pos = FormRange x y
               , unProved = f a
               }
             )
@@ -267,8 +260,8 @@ runForm
   :: (Monad m)
   => Environment m input
   -> Text
-  -> Form m input error view proof a
-  -> m (View error view, m (Result error (Proved proof a)))
+  -> Form m input error view a
+  -> m (View error view, m (Result error (Proved a)))
 runForm env prefix' form =
   evalStateT (runReaderT (unForm form) env) (unitRange (zeroId $ unpack prefix'))
 
@@ -278,7 +271,7 @@ runForm'
   :: (Monad m)
   => Environment m input
   -> Text
-  -> Form m input error view proof a
+  -> Form m input error view a
   -> m (view, Maybe a)
 runForm' env prefix form =
   do
@@ -294,7 +287,7 @@ runForm' env prefix form =
 viewForm
   :: (Monad m)
   => Text -- ^ form prefix
-  -> Form m input error view proof a -- ^ form to view
+  -> Form m input error view a -- ^ form to view
   -> m view
 viewForm prefix form =
   do
@@ -313,7 +306,7 @@ eitherForm
   :: (Monad m)
   => Environment m input -- ^ Input environment
   -> Text -- ^ Identifier for the form
-  -> Form m input error view proof a -- ^ Form to run
+  -> Form m input error view a -- ^ Form to run
   -> m (Either view a) -- ^ Result
 eitherForm env id' form = do
   (view', mresult) <- runForm env id' form
@@ -328,7 +321,7 @@ eitherForm env id' form = do
 view
   :: (Monad m)
   => view -- ^ View to insert
-  -> Form m input error view () () -- ^ Resulting form
+  -> Form m input error view () -- ^ Resulting form
 view view' =
   Form $ do
     i <- getFormId
@@ -337,8 +330,7 @@ view view' =
       , pure
         ( Ok
           ( Proved
-            { proofs = ()
-            , pos = FormRange i i
+            { pos = FormRange i i
             , unProved = ()
             }
           )
@@ -354,9 +346,9 @@ view view' =
 -- element.
 (++>)
   :: (Monad m, Monoid view)
-  => Form m input error view () ()
-  -> Form m input error view proof a
-  -> Form m input error view proof a
+  => Form m input error view ()
+  -> Form m input error view a
+  -> Form m input error view a
 f1 ++> f2 =
   Form $ do
     -- Evaluate the form that matters first, so we have a correct range set
@@ -370,9 +362,9 @@ infixl 6 ++>
 --
 (<++)
   :: (Monad m, Monoid view)
-  => Form m input error view proof a
-  -> Form m input error view () ()
-  -> Form m input error view proof a
+  => Form m input error view a
+  -> Form m input error view ()
+  -> Form m input error view a
 f1 <++ f2 =
   Form $ do
     -- Evaluate the form that matters first, so we have a correct range set
@@ -388,8 +380,8 @@ infixr 5 <++
 mapView
   :: (Monad m, Functor m)
   => (view -> view') -- ^ Manipulator
-  -> Form m input error view proof a -- ^ Initial form
-  -> Form m input error view' proof a -- ^ Resulting form
+  -> Form m input error view a -- ^ Initial form
+  -> Form m input error view' a -- ^ Resulting form
 mapView f = Form . fmap (first $ fmap f) . unForm
 
 -- | Utility Function: turn a view and pure value into a successful 'FormState'
@@ -398,15 +390,14 @@ mkOk
   => FormId
   -> view
   -> a
-  -> FormState m input (View error view, m (Result error (Proved () a)))
+  -> FormState m input (View error view, m (Result error (Proved a)))
 mkOk i view' val =
   pure
     ( View $ const $ view'
     , pure $
       Ok
         ( Proved
-          { proofs = ()
-          , pos = unitRange i
+          { pos = unitRange i
           , unProved = val
           }
         )

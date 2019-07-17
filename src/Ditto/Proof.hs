@@ -10,7 +10,6 @@ A 'Proof' does three things:
 module Ditto.Proof where
 
 import Control.Monad.Trans (lift)
-import Data.Bifunctor (Bifunctor (bimap))
 import Numeric (readDec, readFloat, readSigned)
 import Ditto.Core (Form (..), Proved (..))
 import Ditto.Result (Result (..))
@@ -23,27 +22,24 @@ import Ditto.Result (Result (..))
 -- Generally, each 'Proof' has a unique data-type associated with it
 -- which names the proof, such as:
 --
--- > data NotNull = NotNull
 --
-data Proof m error proof a b
-  = Proof
-      { proofName :: proof -- ^ name of the thing to prove
-      , proofFunction :: a -> m (Either error b) -- ^ function which provides the proof
-      }
+data Proof m error a b = Proof
+  { proofFunction :: a -> m (Either error b) -- ^ function which provides the proof
+  }
 
 -- | apply a 'Proof' to a 'Form'
 prove
   :: (Monad m)
-  => Form m input error view q a
-  -> Proof m error proof a b
-  -> Form m input error view proof b
-prove (Form frm) (Proof p f) =
+  => Form m input error view a
+  -> Proof m error a b
+  -> Form m input error view b
+prove (Form frm) (Proof f) =
   Form $ do
     (xml, mval) <- frm
     val <- lift $ lift $ mval
     case val of
       (Error errs) -> pure (xml, pure $ Error errs)
-      (Ok (Proved _ posi a)) ->
+      (Ok (Proved posi a)) ->
         do
           r <- lift $ lift $ f a
           case r of
@@ -54,8 +50,7 @@ prove (Form frm) (Proof p f) =
                 , pure $
                   Ok
                     ( Proved
-                      { proofs = p
-                      , pos = posi
+                      { pos = posi
                       , unProved = b
                       }
                     )
@@ -68,56 +63,44 @@ prove (Form frm) (Proof p f) =
 -- This is useful when you want just want classic digestive-functors behaviour.
 transform
   :: (Monad m)
-  => Form m input error view anyProof a
-  -> Proof m error proof a b
-  -> Form m input error view () b
-transform frm proof = bimap (const ()) id (frm `prove` proof)
+  => Form m input error view a
+  -> Proof m error a b
+  -> Form m input error view b
+transform frm proof = frm `prove` proof
 
 -- | transform the 'Form' result using a monadic 'Either' function.
 transformEitherM
   :: (Monad m)
-  => Form m input error view anyProof a
+  => Form m input error view a
   -> (a -> m (Either error b))
-  -> Form m input error view () b
-transformEitherM frm func = frm `transform` (Proof () func)
+  -> Form m input error view b
+transformEitherM frm func = frm `transform` (Proof func)
 
 -- | transform the 'Form' result using an 'Either' function.
 transformEither
   :: (Monad m)
-  => Form m input error view anyProof a
+  => Form m input error view a
   -> (a -> Either error b)
-  -> Form m input error view () b
+  -> Form m input error view b
 transformEither frm func = transformEitherM frm (pure . func)
 
 -- * Various Proofs
 
--- | proof that a list is not empty
-data NotNull = NotNull
-
 -- | prove that a list is not empty
-notNullProof :: (Monad m) => error -> Proof m error NotNull [a] [a]
-notNullProof errorMsg = Proof NotNull (pure . check)
+notNullProof :: (Monad m) => error -> Proof m error [a] [a]
+notNullProof errorMsg = Proof (pure . check)
   where
     check list =
       if null list
       then (Left errorMsg)
       else (Right list)
 
--- | proof that a 'String' is a decimal number
-data Decimal = Decimal
-
--- | proof that a 'String' is a Real/Fractional number
-data RealFractional = RealFractional
-
--- | proof that a number is also (allowed to be) signed
-data Signed a = Signed a
-
 -- | read an unsigned number in decimal notation
 decimal
   :: (Monad m, Eq i, Num i)
   => (String -> error) -- ^ create an error message ('String' is the value that did not parse)
-  -> Proof m error Decimal String i
-decimal mkError = Proof Decimal (pure . toDecimal)
+  -> Proof m error String i
+decimal mkError = Proof (pure . toDecimal)
   where
     toDecimal str =
       case readDec str of
@@ -125,8 +108,8 @@ decimal mkError = Proof Decimal (pure . toDecimal)
         _ -> (Left $ mkError str)
 
 -- | read signed decimal number
-signedDecimal :: (Monad m, Eq i, Real i) => (String -> error) -> Proof m error (Signed Decimal) String i
-signedDecimal mkError = Proof (Signed Decimal) (pure . toDecimal)
+signedDecimal :: (Monad m, Eq i, Real i) => (String -> error) -> Proof m error String i
+signedDecimal mkError = Proof (pure . toDecimal)
   where
     toDecimal str =
       case (readSigned readDec) str of
@@ -134,8 +117,8 @@ signedDecimal mkError = Proof (Signed Decimal) (pure . toDecimal)
         _ -> (Left $ mkError str)
 
 -- | read 'RealFrac' number
-realFrac :: (Monad m, RealFrac a) => (String -> error) -> Proof m error RealFractional String a
-realFrac mkError = Proof RealFractional (pure . toRealFrac)
+realFrac :: (Monad m, RealFrac a) => (String -> error) -> Proof m error String a
+realFrac mkError = Proof (pure . toRealFrac)
   where
     toRealFrac str =
       case readFloat str of
@@ -143,8 +126,8 @@ realFrac mkError = Proof RealFractional (pure . toRealFrac)
         _ -> (Left $ mkError str)
 
 -- | read a signed 'RealFrac' number
-realFracSigned :: (Monad m, RealFrac a) => (String -> error) -> Proof m error (Signed RealFractional) String a
-realFracSigned mkError = Proof (Signed RealFractional) (pure . toRealFrac)
+realFracSigned :: (Monad m, RealFrac a) => (String -> error) -> Proof m error String a
+realFracSigned mkError = Proof (pure . toRealFrac)
   where
     toRealFrac str =
       case (readSigned readFloat) str of

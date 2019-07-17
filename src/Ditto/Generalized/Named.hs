@@ -23,7 +23,7 @@ input
   -> (FormId -> a -> view)
   -> a
   -> String
-  -> Form m input err view () a
+  -> Form m input err view a
 input fromInput toView initialValue name =
   Form $ do
     let i = FormIdCustom name
@@ -35,8 +35,7 @@ input fromInput toView initialValue name =
           , pure $
             Ok
               ( Proved
-                { proofs = ()
-                , pos = unitRange i
+                { pos = unitRange i
                 , unProved = initialValue
                 }
               )
@@ -47,8 +46,7 @@ input fromInput toView initialValue name =
           , pure $
             Ok
               ( Proved
-                { proofs = ()
-                , pos = unitRange i
+                { pos = unitRange i
                 , unProved = a
                 }
               )
@@ -69,7 +67,7 @@ inputMaybe
   -> (FormId -> a -> view)
   -> a
   -> String
-  -> Form m input err view () (Maybe a)
+  -> Form m input err view (Maybe a)
 inputMaybe fromInput toView initialValue name =
   Form $ do
     let i = FormIdCustom name
@@ -80,8 +78,7 @@ inputMaybe fromInput toView initialValue name =
           , pure $
             Ok
               ( Proved
-                { proofs = ()
-                , pos = unitRange i
+                { pos = unitRange i
                 , unProved = Just initialValue
                 }
               )
@@ -92,8 +89,7 @@ inputMaybe fromInput toView initialValue name =
           , pure $
             Ok
               ( Proved
-                { proofs = ()
-                , pos = unitRange i
+                { pos = unitRange i
                 , unProved = (Just a)
                 }
               )
@@ -107,8 +103,7 @@ inputMaybe fromInput toView initialValue name =
           , pure $
             Ok
               ( Proved
-                { proofs = ()
-                , pos = unitRange i
+                { pos = unitRange i
                 , unProved = Nothing
                 }
               )
@@ -120,7 +115,7 @@ inputNoData
   => (FormId -> a -> view)
   -> a
   -> String
-  -> Form m input err view () ()
+  -> Form m input err view ()
 inputNoData toView a name =
   Form $ do
     let i = FormIdCustom name
@@ -129,8 +124,7 @@ inputNoData toView a name =
       , pure $
         Ok
           ( Proved
-            { proofs = ()
-            , pos = unitRange i
+            { pos = unitRange i
             , unProved = ()
             }
           )
@@ -141,7 +135,7 @@ inputFile
   :: forall m input err view. (Monad m, FormInput input, FormError err, ErrorInputType err ~ input)
   => (FormId -> view)
   -> String
-  -> Form m input err view () (FileType input)
+  -> Form m input err view (FileType input)
 inputFile toView name =
   Form $ do
     let i = FormIdCustom name
@@ -158,8 +152,7 @@ inputFile toView name =
           , pure $
             Ok
               ( Proved
-                { proofs = ()
-                , pos = unitRange i
+                { pos = unitRange i
                 , unProved = a
                 }
               )
@@ -185,7 +178,7 @@ inputMulti
   -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
   -> (a -> Bool) -- ^ isChecked/isSelected initially
   -> String
-  -> Form m input err view () [a]
+  -> Form m input err view [a]
 inputMulti choices mkView isSelected name =
   Form $ do
     let i = FormIdCustom name
@@ -242,7 +235,7 @@ inputChoice
   -> [(a, lbl)] -- ^ value, label
   -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
   -> String
-  -> Form m input err view () a
+  -> Form m input err view a
 inputChoice isDefault choices mkView name =
   Form $ do
     let i = FormIdCustom name
@@ -312,12 +305,12 @@ inputChoice isDefault choices mkView name =
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoiceForms
-  :: forall a m err input lbl view proof. (Functor m, Monad m, FormError err, ErrorInputType err ~ input, FormInput input)
+  :: forall a m err input lbl view. (Functor m, Monad m, FormError err, ErrorInputType err ~ input, FormInput input)
   => a
-  -> [(Form m input err view proof a, lbl)] -- ^ value, label
+  -> [(Form m input err view a, lbl)] -- ^ value, label
   -> (FormId -> [(FormId, Int, FormId, view, lbl, Bool)] -> view) -- ^ function which generates the view
   -> String
-  -> Form m input err view proof a
+  -> Form m input err view a
 inputChoiceForms def choices mkView name =
   Form $ do
     let i = FormIdCustom name -- id used for the 'name' attribute of the radio buttons
@@ -371,27 +364,27 @@ inputChoiceForms def choices mkView name =
       => FormId
       -> view
       -> a
-      -> FormState m input (View err view, m (Result err (Proved proof a)))
+      -> FormState m input (View err view, m (Result err (Proved a)))
     mkOk' _ view' _ =
       pure
         ( View $ const view'
         , pure $ Error []
         )
-    selectFirst :: [(Form m input err view proof a, lbl)] -> [(Form m input err view proof a, lbl, Bool)]
+    selectFirst :: [(Form m input err view a, lbl)] -> [(Form m input err view a, lbl, Bool)]
     selectFirst ((frm, lbl) : fs) = (frm, lbl, True) : map (\(frm', lbl') -> (frm', lbl', False)) fs
     selectFirst [] = []
-    markSelected :: Either e Int -> [(Int, (Form m input err view proof a, lbl))] -> [(Form m input err view proof a, lbl, Bool)]
+    markSelected :: Either e Int -> [(Int, (Form m input err view a, lbl))] -> [(Form m input err view a, lbl, Bool)]
     markSelected en choices' =
       map (\(i, (f, lbl)) -> (f, lbl, either (const False) (==i) en)) choices'
-    viewSubForm :: (FormId, Int, FormId, Form m input err view proof a, lbl, Bool) -> FormState m input (FormId, Int, FormId, view, lbl, Bool)
+    viewSubForm :: (FormId, Int, FormId, Form m input err view a, lbl, Bool) -> FormState m input (FormId, Int, FormId, view, lbl, Bool)
     viewSubForm (fid, vl, iview, frm, lbl, selected) =
       do
         incFormId
         (v, _) <- unForm frm
         pure (fid, vl, iview, unView v [], lbl, selected)
-    augmentChoices :: (Monad m) => [(Form m input err view proof a, lbl, Bool)] -> FormState m input [(FormId, Int, FormId, Form m input err view proof a, lbl, Bool)]
+    augmentChoices :: (Monad m) => [(Form m input err view a, lbl, Bool)] -> FormState m input [(FormId, Int, FormId, Form m input err view a, lbl, Bool)]
     augmentChoices choices' = mapM augmentChoice (zip [0..] choices')
-    augmentChoice :: (Monad m) => (Int, (Form m input err view proof a, lbl, Bool)) -> FormState m input (FormId, Int, FormId, Form m input err view proof a, lbl, Bool)
+    augmentChoice :: (Monad m) => (Int, (Form m input err view a, lbl, Bool)) -> FormState m input (FormId, Int, FormId, Form m input err view a, lbl, Bool)
     augmentChoice (vl, (frm, lbl, selected)) =
       do
         incFormId
@@ -422,7 +415,7 @@ inputChoiceForms def choices mkView name =
 label
   :: Monad m
   => (FormId -> view)
-  -> Form m input err view () ()
+  -> Form m input err view ()
 label f =
   Form $ do
     id' <- getFormId
@@ -430,8 +423,7 @@ label f =
       ( View (const $ f id')
       , pure
         ( Ok $ Proved
-          { proofs = ()
-          , pos = unitRange id'
+          { pos = unitRange id'
           , unProved = ()
           }
         )
@@ -445,7 +437,7 @@ label f =
 errors
   :: Monad m
   => ([err] -> view) -- ^ function to convert the err messages into a view
-  -> Form m input err view () ()
+  -> Form m input err view ()
 errors f =
   Form $ do
     range <- getFormRange
@@ -453,8 +445,7 @@ errors f =
       ( View (f . retainErrors range)
       , pure
         ( Ok $ Proved
-          { proofs = ()
-          , pos = range
+          { pos = range
           , unProved = ()
           }
         )
@@ -464,7 +455,7 @@ errors f =
 childErrors
   :: Monad m
   => ([err] -> view)
-  -> Form m input err view () ()
+  -> Form m input err view ()
 childErrors f =
   Form $ do
     range <- getFormRange
@@ -472,8 +463,7 @@ childErrors f =
       ( View (f . retainChildErrors range)
       , pure
         ( Ok $ Proved
-          { proofs = ()
-          , pos = range
+          { pos = range
           , unProved = ()
           }
         )
