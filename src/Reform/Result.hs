@@ -3,10 +3,9 @@
 module Reform.Result
   ( Result (..)
   , getResult
-  , FormId
+  , FormId (..)
   , zeroId
   , mapId
-  , formIdList
   , FormRange (..)
   , incrementFormId
   , unitRange
