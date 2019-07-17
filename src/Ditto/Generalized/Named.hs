@@ -4,16 +4,16 @@
 
 -- This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
 
-module Reform.Generalized where
+module Ditto.Generalized.Named where
 
 import Control.Applicative ((<$>))
 import Control.Monad (foldM)
 import Control.Monad.Trans (lift)
 import Data.Bifunctor
 import Numeric (readDec)
-import Reform.Backend
-import Reform.Core
-import Reform.Result
+import Ditto.Backend
+import Ditto.Core
+import Ditto.Result
 import qualified Data.IntSet as IS
 
 -- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.
@@ -22,10 +22,11 @@ input
   => (input -> Either err a)
   -> (FormId -> a -> view)
   -> a
+  -> String
   -> Form m input err view () a
-input fromInput toView initialValue =
+input fromInput toView initialValue name =
   Form $ do
-    i <- getFormId
+    let i = FormIdCustom name
     v <- getFormInput' i
     case v of
       Default ->
@@ -67,10 +68,11 @@ inputMaybe
   => (input -> Either err a)
   -> (FormId -> a -> view)
   -> a
+  -> String
   -> Form m input err view () (Maybe a)
-inputMaybe fromInput toView initialValue =
+inputMaybe fromInput toView initialValue name =
   Form $ do
-    i <- getFormId
+    let i = FormIdCustom name
     v <- getFormInput' i
     case v of
       Default -> pure
@@ -117,10 +119,11 @@ inputNoData
   :: (Monad m)
   => (FormId -> a -> view)
   -> a
+  -> String
   -> Form m input err view () ()
-inputNoData toView a =
+inputNoData toView a name =
   Form $ do
-    i <- getFormId
+    let i = FormIdCustom name
     pure
       ( View $ const $ toView i a
       , pure $
@@ -137,10 +140,11 @@ inputNoData toView a =
 inputFile
   :: forall m input err view. (Monad m, FormInput input, FormError err, ErrorInputType err ~ input)
   => (FormId -> view)
+  -> String
   -> Form m input err view () (FileType input)
-inputFile toView =
+inputFile toView name =
   Form $ do
-    i <- getFormId
+    let i = FormIdCustom name
     v <- getFormInput' i
     case v of
       Default ->
@@ -180,10 +184,11 @@ inputMulti
   => [(a, lbl)] -- ^ value, label, initially checked
   -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
   -> (a -> Bool) -- ^ isChecked/isSelected initially
+  -> String
   -> Form m input err view () [a]
-inputMulti choices mkView isSelected =
+inputMulti choices mkView isSelected name =
   Form $ do
-    i <- getFormId
+    let i = FormIdCustom name
     inp <- getFormInput' i
     case inp of
       Default ->
@@ -227,7 +232,7 @@ inputMulti choices mkView isSelected =
     augmentChoice (vl, (_, lbl, checked)) =
       do
         incFormId
-        i <- getFormId
+        let i = FormIdCustom name
         pure (i, vl, lbl, checked)
 
 -- | radio buttons, single @\<select\>@ boxes
@@ -236,10 +241,11 @@ inputChoice
   => (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
   -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
+  -> String
   -> Form m input err view () a
-inputChoice isDefault choices mkView =
+inputChoice isDefault choices mkView name =
   Form $ do
-    i <- getFormId
+    let i = FormIdCustom name
     inp <- getFormInput' i
     case inp of
       Default ->
@@ -301,7 +307,7 @@ inputChoice isDefault choices mkView =
     augmentChoice (vl, (_a, lbl, selected)) =
       do
         incFormId
-        i <- getFormId
+        let i = FormIdCustom name
         pure (i, vl, lbl, selected)
 
 -- | radio buttons, single @\<select\>@ boxes
@@ -310,10 +316,11 @@ inputChoiceForms
   => a
   -> [(Form m input err view proof a, lbl)] -- ^ value, label
   -> (FormId -> [(FormId, Int, FormId, view, lbl, Bool)] -> view) -- ^ function which generates the view
+  -> String
   -> Form m input err view proof a
-inputChoiceForms def choices mkView =
+inputChoiceForms def choices mkView name =
   Form $ do
-    i <- getFormId -- id used for the 'name' attribute of the radio buttons
+    let i = FormIdCustom name -- id used for the 'name' attribute of the radio buttons
     inp <- getFormInput' i
     case inp of
       Default ->
@@ -388,7 +395,7 @@ inputChoiceForms def choices mkView =
     augmentChoice (vl, (frm, lbl, selected)) =
       do
         incFormId
-        i <- getFormId
+        let i = FormIdCustom name
         incFormId
         iview <- getFormId
         pure (i, vl, iview, frm, lbl, selected)

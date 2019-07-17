@@ -1,6 +1,6 @@
 -- | Module for the core result type, and related functions
 --
-module Reform.Result
+module Ditto.Result
   ( Result (..)
   , getResult
   , FormId (..)

@@ -7,13 +7,13 @@ A 'Proof' does three things:
  - optionally transforms the input value to another value while preserving that criteria
  - puts the proof name in type-signature where the type-checker can use it
 -}
-module Reform.Proof where
+module Ditto.Proof where
 
 import Control.Monad.Trans (lift)
 import Data.Bifunctor (Bifunctor (bimap))
 import Numeric (readDec, readFloat, readSigned)
-import Reform.Core (Form (..), Proved (..))
-import Reform.Result (Result (..))
+import Ditto.Core (Form (..), Proved (..))
+import Ditto.Result (Result (..))
 
 -- | A 'Proof' attempts to prove something about a value.
 --

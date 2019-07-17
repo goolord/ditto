@@ -6,12 +6,12 @@ let
 
   f = { mkDerivation, base, containers, mtl, stdenv, semigroups, text, cabal-install }:
       mkDerivation {
-        pname = "reform";
+        pname = "ditto";
         version = "0.2.7.1";
         src = ./.;
         libraryHaskellDepends = [ base containers mtl semigroups text cabal-install ];
         homepage = "http://www.happstack.com/";
-        description = "reform is a type-safe HTML form generation and validation library";
+        description = "ditto is a type-safe HTML form generation and validation library";
         license = stdenv.lib.licenses.bsd3;
       };
 

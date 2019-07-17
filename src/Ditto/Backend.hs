@@ -7,15 +7,15 @@ This module contains two classes. 'FormInput' is a class which is parameterized 
 The 'FormError' class is used to map error messages into an application specific error type.
 
 -}
-module Reform.Backend where
+module Ditto.Backend where
 
 import Data.Text (Text)
-import Reform.Result (FormId)
+import Ditto.Result (FormId)
 import qualified Data.Text as T
 
 -- | an error type used to represent errors that are common to all backends
 --
--- These errors should only occur if there is a bug in the reform-*
+-- These errors should only occur if there is a bug in the ditto-*
 -- packages. Perhaps we should make them an 'Exception' so that we can
 -- get rid of the 'FormError' class.
 data CommonFormError input

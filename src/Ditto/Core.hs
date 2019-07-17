@@ -4,7 +4,7 @@
 {- |
 This module defines the 'Form' type, its instances, core manipulation functions, and a bunch of helper utilities.
 -}
-module Reform.Core where
+module Ditto.Core where
 
 import Control.Applicative (Applicative ((<*>), pure))
 import Control.Monad.Reader (MonadReader (ask), ReaderT, runReaderT)
@@ -15,7 +15,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Monoid (Monoid (mappend, mempty))
 import qualified Data.Semigroup as SG
 import Data.Text.Lazy (Text, unpack)
-import Reform.Result (FormId (..), FormRange (..), Result (..), unitRange, zeroId)
+import Ditto.Result (FormId (..), FormRange (..), Result (..), unitRange, zeroId)
 
 ------------------------------------------------------------------------------
 -- * Proved
