@@ -20,7 +20,6 @@ import Data.List (intercalate)
 import Control.Applicative (Applicative (..))
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NE
--- import Data.List (intercalate)
 
 -- | Type for failing computations
 --
@@ -87,7 +86,8 @@ instance Show FormId where
 
 -- | get the head 'Integer' from a 'FormId'
 formId :: FormId -> Integer
-formId = NE.head . formIdList
+formId (FormId _ (x :| _)) = x
+formId (FormIdCustom x) = fromIntegral $ sum $ fromEnum <$> x
 
 -- | A range of ID's to specify a group of forms
 --
