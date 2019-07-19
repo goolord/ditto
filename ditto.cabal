@@ -18,7 +18,7 @@ tested-with:   GHC == 7.6.3, GHC == 7.8.4, GHC == 7.10.3, GHC == 8.2.2, GHC == 8
 
 source-repository head
     type:     git
-    location: https://github.com/Happstack/ditto.git
+    location: https://github.com/goolord/ditto.git
 
 library
   ghc-options: -Wall
