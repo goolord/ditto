@@ -23,7 +23,7 @@ import Ditto.Result (Result (..))
 -- which names the proof, such as:
 --
 --
-data Proof m error a b = Proof
+newtype Proof m error a b = Proof
   { proofFunction :: a -> m (Either error b) -- ^ function which provides the proof
   }
 

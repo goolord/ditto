@@ -43,9 +43,7 @@ commonFormErrorStr showInput cfe =
 
 -- | A Class to lift a 'CommonFormError' into an application-specific error type
 class FormError e where
-
   type ErrorInputType e
-
   commonFormError :: (CommonFormError (ErrorInputType e)) -> e
 
 -- | Class which all backends should implement.
