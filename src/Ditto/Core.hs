@@ -184,7 +184,7 @@ newtype Form m input error view a = Form {unForm :: FormState m input (View erro
 --         (Ok (Proved posi a)) -> pure (view1, pure $ Ok (Proved posi (f a)))
 --         (Error errs) -> pure (view1, pure $ Error errs)
 
--- instance (Monoid view, Monad m) => Applicative (Form m input error view) where
+-- instance (Semigroup view, Monad m) => Applicative (Form m input error view) where
 --   pure a =
 --     Form $ do
 --       i <- getFormId
@@ -200,12 +200,12 @@ newtype Form m input error view a = Form {unForm :: FormState m input (View erro
 --       fok <- lift $ lift $ mfok
 --       aok <- lift $ lift $ maok
 --       case (fok, aok) of
---         (Error errs1, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs1 ++ errs2)
---         (Error errs1, _) -> pure (view1 `mappend` view2, pure $ Error $ errs1)
---         (_, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs2)
+--         (Error errs1, Error errs2) -> pure (view1 <> view2, pure $ Error $ errs1 ++ errs2)
+--         (Error errs1, _) -> pure (view1 <> view2, pure $ Error $ errs1)
+--         (_, Error errs2) -> pure (view1 <> view2, pure $ Error $ errs2)
 --         (Ok (Proved (FormRange x _) f), Ok (Proved (FormRange _ y) a)) ->
 --           pure
---             ( view1 `mappend` view2
+--             ( view1 <> view2
 --             , pure $ Ok $ Proved
 --               { pos = FormRange x y
 --               , unProved = f a
@@ -248,12 +248,12 @@ instance (Functor m, Monoid view, Monad m, x ~ ()) => Applicative (Form m input 
       fok <- lift $ lift $ mfok
       aok <- lift $ lift $ maok
       case (fok, aok) of
-        (Error errs1, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs1 ++ errs2)
-        (Error errs1, _) -> pure (view1 `mappend` view2, pure $ Error $ errs1)
-        (_, Error errs2) -> pure (view1 `mappend` view2, pure $ Error $ errs2)
+        (Error errs1, Error errs2) -> pure (view1 <> view2, pure $ Error $ errs1 ++ errs2)
+        (Error errs1, _) -> pure (view1 <> view2, pure $ Error $ errs1)
+        (_, Error errs2) -> pure (view1 <> view2, pure $ Error $ errs2)
         (Ok (Proved (FormRange x _) f), Ok (Proved (FormRange _ y) a)) ->
           pure
-            ( view1 `mappend` view2
+            ( view1 <> view2
             , pure $ Ok $ Proved
               { pos = FormRange x y
               , unProved = f a
@@ -353,7 +353,7 @@ view view' =
 -- for=\"someid\"\>@, which need to refer to the id of another
 -- element.
 (++>)
-  :: (Monad m, Monoid view)
+  :: (Monad m, Semigroup view)
   => Form m input error view ()
   -> Form m input error view a
   -> Form m input error view a
@@ -362,14 +362,14 @@ f1 ++> f2 =
     -- Evaluate the form that matters first, so we have a correct range set
     (v2, r) <- unForm f2
     (v1, _) <- unForm f1
-    pure (v1 `mappend` v2, r)
+    pure (v1 <> v2, r)
 
 infixl 6 ++>
 
 -- | Append a unit form to the right. See '++>'.
 --
 (<++)
-  :: (Monad m, Monoid view)
+  :: (Monad m, Semigroup view)
   => Form m input error view a
   -> Form m input error view ()
   -> Form m input error view a
@@ -378,7 +378,7 @@ f1 <++ f2 =
     -- Evaluate the form that matters first, so we have a correct range set
     (v1, r) <- unForm f1
     (v2, _) <- unForm f2
-    pure (v1 `mappend` v2, r)
+    pure (v1 <> v2, r)
 
 infixr 5 <++
 
