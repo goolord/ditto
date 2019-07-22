@@ -26,7 +26,7 @@ input
   -> Form m input err view a
 input fromInput toView initialValue name =
   Form $ do
-    let i = FormIdCustom name
+    i <- getNamedFormId name
     v <- getFormInput' i
     case v of
       Default ->
@@ -70,7 +70,7 @@ inputMaybe
   -> Form m input err view (Maybe a)
 inputMaybe fromInput toView initialValue name =
   Form $ do
-    let i = FormIdCustom name
+    i <- getNamedFormId name
     v <- getFormInput' i
     case v of
       Default -> pure
@@ -118,7 +118,7 @@ inputNoData
   -> Form m input err view ()
 inputNoData toView a name =
   Form $ do
-    let i = FormIdCustom name
+    i <- getNamedFormId name
     pure
       ( View $ const $ toView i a
       , pure $
@@ -138,7 +138,7 @@ inputFile
   -> Form m input err view (FileType input)
 inputFile toView name =
   Form $ do
-    let i = FormIdCustom name
+    i <- getNamedFormId name
     v <- getFormInput' i
     case v of
       Default ->
@@ -181,7 +181,7 @@ inputMulti
   -> Form m input err view [a]
 inputMulti choices mkView isSelected name =
   Form $ do
-    let i = FormIdCustom name
+    i <- getNamedFormId name
     inp <- getFormInput' i
     case inp of
       Default ->
@@ -225,7 +225,7 @@ inputMulti choices mkView isSelected name =
     augmentChoice (vl, (_, lbl, checked)) =
       do
         incFormId
-        let i = FormIdCustom name
+        i <- getNamedFormId name
         pure (i, vl, lbl, checked)
 
 -- | radio buttons, single @\<select\>@ boxes
@@ -238,7 +238,7 @@ inputChoice
   -> Form m input err view a
 inputChoice isDefault choices mkView name =
   Form $ do
-    let i = FormIdCustom name
+    i <- getNamedFormId name
     inp <- getFormInput' i
     case inp of
       Default ->
@@ -300,7 +300,7 @@ inputChoice isDefault choices mkView name =
     augmentChoice (vl, (_a, lbl, selected)) =
       do
         incFormId
-        let i = FormIdCustom name
+        i <- getNamedFormId name
         pure (i, vl, lbl, selected)
 
 -- | radio buttons, single @\<select\>@ boxes
@@ -313,7 +313,7 @@ inputChoiceForms
   -> Form m input err view a
 inputChoiceForms def choices mkView name =
   Form $ do
-    let i = FormIdCustom name -- id used for the 'name' attribute of the radio buttons
+    i <- getNamedFormId name -- id used for the 'name' attribute of the radio buttons
     inp <- getFormInput' i
     case inp of
       Default ->
@@ -388,7 +388,7 @@ inputChoiceForms def choices mkView name =
     augmentChoice (vl, (frm, lbl, selected)) =
       do
         incFormId
-        let i = FormIdCustom name
+        i <- getNamedFormId name
         incFormId
         iview <- getFormId
         pure (i, vl, iview, frm, lbl, selected)
@@ -415,10 +415,11 @@ inputChoiceForms def choices mkView name =
 label
   :: Monad m
   => (FormId -> view)
+  -> String
   -> Form m input err view ()
-label f =
+label f name =
   Form $ do
-    id' <- getFormId
+    id' <- getNamedFormId name
     pure
       ( View (const $ f id')
       , pure

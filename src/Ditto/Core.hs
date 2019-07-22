@@ -11,10 +11,11 @@ import Control.Monad.Reader (MonadReader (ask), ReaderT, runReaderT)
 import Control.Monad.State (MonadState (get, put), StateT, evalStateT)
 import Control.Monad.Trans (lift)
 import Data.Bifunctor (Bifunctor (..))
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Monoid (Monoid (mappend, mempty))
-import qualified Data.Semigroup as SG
 import Data.Text.Lazy (Text, unpack)
 import Ditto.Result (FormId (..), FormRange (..), Result (..), unitRange, zeroId)
+import qualified Data.Semigroup as SG
 
 ------------------------------------------------------------------------------
 -- * Proved
@@ -117,6 +118,13 @@ getFormId :: Monad m => FormState m i FormId
 getFormId = do
   FormRange x _ <- get
   pure x
+
+getNamedFormId :: Monad m => String -> FormState m i FormId
+getNamedFormId name = do
+  FormRange x _ <- get
+  pure $ case x of
+    FormIdCustom _ i -> FormIdCustom name i
+    FormId _ (i :| _) -> FormIdCustom name i
 
 -- | Utility function: increment the current 'FormId'.
 incFormId :: Monad m => FormState m i ()

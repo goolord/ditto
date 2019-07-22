@@ -29,19 +29,16 @@ data Result e ok
   deriving (Show, Eq)
 
 instance Functor (Result e) where
-
   fmap _ (Error x) = Error x
   fmap f (Ok x) = Ok (f x)
 
 instance Monad (Result e) where
-
   return = Ok
 
   Error x >>= _ = Error x
   Ok x >>= f = f x
 
 instance Applicative (Result e) where
-
   pure = Ok
 
   Error x <*> Error y = Error $ x ++ y
@@ -61,9 +58,9 @@ data FormId
       { -- | Global prefix for the form
         formPrefix :: String
       , -- | Stack indicating field. Head is most specific to this item
-        formIdList :: NonEmpty Integer
+        formIdList :: NonEmpty Int
       }
-  | FormIdCustom String
+  | FormIdCustom String Int
   deriving (Eq, Ord)
 
 -- | The zero ID, i.e. the first ID that is usable
@@ -74,20 +71,20 @@ zeroId p = FormId
   , formIdList = pure 0
   }
 
--- | map a function over the @NonEmpty Integer@ inside a 'FormId'
-mapId :: (NonEmpty Integer -> NonEmpty Integer) -> FormId -> FormId
+-- | map a function over the @NonEmpty Int@ inside a 'FormId'
+mapId :: (NonEmpty Int -> NonEmpty Int) -> FormId -> FormId
 mapId f (FormId p is) = FormId p $ f is
 mapId _ x = x
 
 instance Show FormId where
   show (FormId p xs) =
-    p ++ "-fval[" ++ (intercalate "." $ reverse $ map show $ NE.toList xs) ++ "]"
-  show (FormIdCustom x) = x
+    p ++ "-fval-" ++ (intercalate "." $ reverse $ map show $ NE.toList xs)
+  show (FormIdCustom x _) = x
 
--- | get the head 'Integer' from a 'FormId'
-formId :: FormId -> Integer
+-- | get the head 'Int' from a 'FormId'
+formId :: FormId -> Int
 formId (FormId _ (x :| _)) = x
-formId (FormIdCustom x) = fromIntegral $ sum $ fromEnum <$> x
+formId (FormIdCustom _ x) = x
 
 -- | A range of ID's to specify a group of forms
 --
