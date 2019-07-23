@@ -30,6 +30,8 @@ library
     Ditto.Generalized.Named
     Ditto.Proof
     Ditto.Result
+  other-modules:
+    Ditto.Generalized.Internal
   build-depends:       
       base       >= 4    && < 5
     , containers >= 0.4  && < 0.7
