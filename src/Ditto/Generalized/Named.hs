@@ -98,6 +98,7 @@ childErrors
   -> Form m input err view ()
 childErrors = G.childErrors
 
+-- | modify the view of a form based on its errors
 withErrors
   :: Monad m
   => (view -> [err] -> view)
