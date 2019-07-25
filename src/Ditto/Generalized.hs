@@ -90,3 +90,9 @@ childErrors
   -> Form m input err view ()
 childErrors = G.childErrors
 
+withErrors
+  :: Monad m
+  => (view -> [err] -> view)
+  -> Form m input err view a
+  -> Form m input err view a
+withErrors = G.withErrors

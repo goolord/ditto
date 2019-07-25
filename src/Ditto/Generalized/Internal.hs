@@ -469,3 +469,20 @@ childErrors f =
           }
         )
       )
+
+withErrors
+  :: Monad m
+  => (view -> [err] -> view)
+  -> Form m input err view a
+  -> Form m input err view a
+withErrors f form = Form $ do
+  (View v, r) <- unForm form
+  range <- getFormRange
+  pure
+    ( View 
+        (\x -> 
+          let errs = retainChildErrors range x
+          in f (v x) errs
+        )
+    , r
+    )
