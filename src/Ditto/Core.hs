@@ -131,9 +131,7 @@ incFormId = do
 -- function which takes a list of all errors and then produces a new view
 --
 newtype View error v
-  = View
-      { unView :: [(FormRange, error)] -> v
-      }
+  = View { unView :: [(FormRange, error)] -> v }
   deriving (Semigroup, Monoid, Functor)
 
 ------------------------------------------------------------------------------
@@ -166,7 +164,7 @@ newtype View error v
 -- applicative functor and can be used almost exactly like
 -- @digestive-functors <= 0.2@.
 newtype Form m input error view a = Form {unForm :: FormState m input (View error view, m (Result error (Proved a)))}
-  deriving Functor
+  deriving (Functor)
 
 bracketState :: Monad m => FormState m input a -> FormState m input a
 bracketState k = do
@@ -352,6 +350,11 @@ mapView
   -> Form m input error view a -- ^ Initial form
   -> Form m input error view' a -- ^ Resulting form
 mapView f = Form . fmap (first $ fmap f) . unForm
+
+-- | infix mapView: succinct `foo @$ do ..`
+infixr 0 @$
+(@$) :: Monad m => (view -> view) -> Form m input err view a -> Form m input err view a
+(@$) = mapView
 
 -- | Utility Function: turn a view and pure value into a successful 'FormState'
 mkOk
