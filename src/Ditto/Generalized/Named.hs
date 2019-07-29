@@ -43,7 +43,7 @@ inputFile name = G.inputFile (getNamedFormId name)
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
 inputMulti
-  :: forall m input err view a lbl. (Functor m, FormError err, ErrorInputType err ~ input, FormInput input, Monad m)
+  :: forall m input err view a lbl. (FormError err, ErrorInputType err ~ input, FormInput input, Monad m)
   => String
   -> [(a, lbl)] -- ^ value, label, initially checked
   -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
@@ -53,7 +53,7 @@ inputMulti name = G.inputMulti (getNamedFormId name)
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
-  :: forall a m err input lbl view. (Functor m, FormError err, ErrorInputType err ~ input, FormInput input, Monad m)
+  :: forall a m err input lbl view. (FormError err, ErrorInputType err ~ input, FormInput input, Monad m)
   => String
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
@@ -63,7 +63,7 @@ inputChoice name = G.inputChoice (getNamedFormId name)
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoiceForms
-  :: forall a m err input lbl view. (Functor m, Monad m, FormError err, ErrorInputType err ~ input, FormInput input)
+  :: forall a m err input lbl view. (Monad m, FormError err, ErrorInputType err ~ input, FormInput input)
   => String
   -> a
   -> [(Form m input err view a, lbl)] -- ^ value, label

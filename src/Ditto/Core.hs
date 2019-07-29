@@ -226,7 +226,7 @@ instance (Functor m) => Functor (Form m input error view) where
   fmap f form =
     Form $ fmap (second (fmap (fmap (fmap f)))) (unForm form)
 
-instance (Functor m, Monoid view, Monad m, x ~ ()) => Applicative (Form m input error view) where
+instance (Monoid view, Monad m, x ~ ()) => Applicative (Form m input error view) where
   pure a =
     Form $ do
       i <- getFormId
@@ -263,7 +263,7 @@ instance (Functor m, Monoid view, Monad m, x ~ ()) => Applicative (Form m input 
             )
 
 -- ???
-instance (Functor m, Monoid view, Monad m, x ~ ()) => Monad (Form m input error view) where
+instance (Monoid view, Monad m, x ~ ()) => Monad (Form m input error view) where
   formA >>= formFunction = do
     Form $ do
       (view0, mfok) <- unForm formA
@@ -404,7 +404,7 @@ infixr 5 <++
 --
 -- This is useful for wrapping a form inside of a \<fieldset\> or other markup element.
 mapView
-  :: (Monad m, Functor m)
+  :: (Monad m)
   => (view -> view') -- ^ Manipulator
   -> Form m input error view a -- ^ Initial form
   -> Form m input error view' a -- ^ Resulting form
