@@ -12,13 +12,13 @@ import Ditto.Result
 import qualified Ditto.Generalized.Internal as G
 
 -- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.
-input :: (Monad m, FormError err input) => String -> (input -> Either err a) -> (FormId -> a -> view) -> a -> Form m input err view a
+input :: (Monad m, FormError input err) => String -> (input -> Either err a) -> (FormId -> a -> view) -> a -> Form m input err view a
 input name = G.input (getNamedFormId name)
 
 
 -- | used to construct elements with optional initial values, which are still required
 inputMaybeReq
-  :: (Monad m, FormError err input)
+  :: (Monad m, FormError input err)
   => String
   -> (input -> Either err a)
   -> (FormId -> Maybe a -> view)
@@ -28,7 +28,7 @@ inputMaybeReq name = G.inputMaybeReq (getNamedFormId name)
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
 inputMaybe
-  :: (Monad m, FormError err input)
+  :: (Monad m, FormError input err)
   => String
   -> (input -> Either err a)
   -> (FormId -> Maybe a -> view)
@@ -46,7 +46,7 @@ inputNoData name = G.inputNoData (getNamedFormId name)
 
 -- | used for @\<input type=\"file\"\>@
 inputFile
-  :: forall m input err view. (Monad m, FormInput input, FormError err input)
+  :: forall m input err view. (Monad m, FormInput input, FormError input err)
   => String
   -> (FormId -> view)
   -> Form m input err view (FileType input)
@@ -54,7 +54,7 @@ inputFile name = G.inputFile (getNamedFormId name)
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
 inputMulti
-  :: forall m input err view a lbl. (FormError err input, FormInput input, Monad m)
+  :: forall m input err view a lbl. (FormError input err, FormInput input, Monad m)
   => String
   -> [(a, lbl)] -- ^ value, label, initially checked
   -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
@@ -64,7 +64,7 @@ inputMulti name = G.inputMulti (getNamedFormId name)
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
-  :: forall a m err input lbl view. (FormError err input, FormInput input, Monad m)
+  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m)
   => String
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
@@ -74,7 +74,7 @@ inputChoice name = G.inputChoice (getNamedFormId name)
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoiceForms
-  :: forall a m err input lbl view. (Monad m, FormError err input, FormInput input)
+  :: forall a m err input lbl view. (Monad m, FormError input err, FormInput input)
   => String
   -> a
   -> [(Form m input err view a, lbl)] -- ^ value, label

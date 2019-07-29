@@ -56,7 +56,7 @@ commonFormErrorText showInput cfe = case cfe of
   MissingDefaultValue -> "Missing default value."
 
 -- | A Class to lift a 'CommonFormError' into an application-specific error type
-class FormError err input | err -> input where
+class FormError input err where
   commonFormError :: CommonFormError input -> err
 
 instance FormError Text Text where
@@ -73,7 +73,7 @@ class FormInput input where
   -- | Parse the input into a string. This is used for simple text fields
   -- among other things
   --
-  getInputString :: (FormError error input) => input -> Either error String
+  getInputString :: (FormError input err) => input -> Either err String
   getInputString input =
     case getInputStrings input of
       [] -> Left (commonFormError $ NoStringFound input)
@@ -86,7 +86,7 @@ class FormInput input where
 
   -- | Parse the input value into 'Text'
   --
-  getInputText :: (FormError error input) => input -> Either error Text
+  getInputText :: (FormError input err) => input -> Either err Text
   getInputText input =
     case getInputTexts input of
       [] -> Left (commonFormError $ NoStringFound input)
@@ -100,4 +100,4 @@ class FormInput input where
 
   -- | Get a file descriptor for an uploaded file
   --
-  getInputFile :: (FormError error input) => input -> Either error (FileType input)
+  getInputFile :: (FormError input err) => input -> Either err (FileType input)

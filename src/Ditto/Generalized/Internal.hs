@@ -18,7 +18,7 @@ import qualified Data.IntSet as IS
 
 -- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.
 input
-  :: (Monad m, FormError err input)
+  :: forall m input err a view. (Monad m, FormError input err)
   => FormState m input FormId
   -> (input -> Either err a)
   -> (FormId -> a -> view)
@@ -57,11 +57,11 @@ input i' fromInput toView initialValue =
           )
       Missing -> pure
         ( View $ const $ toView i initialValue
-        , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
+        , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
         )
 
 inputMaybeReq
-  :: (Monad m, FormError err input)
+  :: forall m input err a view. (Monad m, FormError input err)
   => FormState m input FormId
   -> (input -> Either err a)
   -> (FormId -> Maybe a -> view)
@@ -82,7 +82,7 @@ inputMaybeReq i' fromInput toView initialValue =
                        , unProved = x
                        }
                    )
-              Nothing -> pure $ Error [(unitRange i, commonFormError MissingDefaultValue)]
+              Nothing -> pure $ Error [(unitRange i, commonFormError (MissingDefaultValue :: CommonFormError input) :: err)]
           )
       Found x -> case fromInput x of
         Right a -> pure
@@ -101,13 +101,13 @@ inputMaybeReq i' fromInput toView initialValue =
           )
       Missing -> pure
         ( View $ const $ toView i initialValue
-        , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
+        , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
         )
 
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
 inputMaybe
-  :: (Monad m, FormError err input)
+  :: (Monad m, FormError input err)
   => FormState m input FormId
   -> (input -> Either err a)
   -> (FormId -> Maybe a -> view)
@@ -176,7 +176,7 @@ inputNoData i' toView =
 
 -- | used for @\<input type=\"file\"\>@
 inputFile
-  :: forall m input err view. (Monad m, FormInput input, FormError err input)
+  :: forall m input err view. (Monad m, FormInput input, FormError input err)
   => FormState m input FormId
   -> (FormId -> view)
   -> Form m input err view (FileType input)
@@ -188,7 +188,7 @@ inputFile i' toView =
       Default ->
         pure
           ( View $ const $ toView i
-          , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
+          , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
           )
       Found x -> case getInputFile' x of
         Right a -> pure
@@ -208,16 +208,16 @@ inputFile i' toView =
       Missing ->
         pure
           ( View $ const $ toView i
-          , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
+          , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) ::err)]
           )
   where
     -- just here for the type-signature to make the type-checker happy
-    getInputFile' :: (FormError err input) => input -> Either err (FileType input)
+    getInputFile' :: (FormError input err) => input -> Either err (FileType input)
     getInputFile' = getInputFile
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
 inputMulti
-  :: forall m input err view a lbl. (FormError err input, FormInput input, Monad m)
+  :: forall m input err view a lbl. (FormError input err, FormInput input, Monad m)
   => FormState m input FormId
   -> [(a, lbl)] -- ^ value, label, initially checked
   -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
@@ -274,7 +274,7 @@ inputMulti i' choices mkView isSelected =
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
-  :: forall a m err input lbl view. (FormError err input, FormInput input, Monad m)
+  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m)
   => FormState m input FormId
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
@@ -318,7 +318,7 @@ inputChoice i' isDefault choices mkView =
             Nothing ->
               pure
                 ( View $ const view'
-                , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
+                , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
                 )
             (Just val) -> mkOk i view' val
   where
@@ -326,7 +326,7 @@ inputChoice i' isDefault choices mkView =
     mkOk' i view' Nothing =
       pure
         ( View $ const $ view'
-        , pure $ Error [(unitRange i, commonFormError MissingDefaultValue)]
+        , pure $ Error [(unitRange i, commonFormError (MissingDefaultValue :: CommonFormError input) :: err)]
         )
     markSelected :: [(a, lbl)] -> ([(a, lbl, Bool)], Maybe a)
     markSelected cs =
@@ -349,7 +349,7 @@ inputChoice i' isDefault choices mkView =
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoiceForms
-  :: forall a m err input lbl view. (Monad m, FormError err input, FormInput input)
+  :: forall a m err input lbl view. (Monad m, FormError input err, FormInput input)
   => FormState m input FormId
   -> a
   -> [(Form m input err view a, lbl)] -- ^ value, label
@@ -397,7 +397,7 @@ inputChoiceForms i' def choices mkView =
                     (v0, _) <- unForm frm
                     pure ((fid, val, iview, unView v0 [], lbl, selected) : views, res)
               )
-              ([], pure $ Error [(unitRange i, commonFormError (InputMissing i))])
+              ([], pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)])
               (choices')
           let view' = mkView i (reverse choices'')
           pure (View (const view'), mres)
