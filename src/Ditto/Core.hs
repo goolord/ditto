@@ -18,7 +18,6 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.Monoid (Monoid (mappend, mempty))
 import Data.Text.Lazy (Text, unpack)
 import Ditto.Result (FormId (..), FormRange (..), Result (..), unitRange, zeroId)
-import qualified Data.Semigroup as SG
 
 ------------------------------------------------------------------------------
 -- * Proved
@@ -86,30 +85,26 @@ data Environment m input
   = Environment (FormId -> m (Value input))
   | NoEnvironment
 
-instance (SG.Semigroup input, Monad m) => SG.Semigroup (Environment m input) where
-
+instance (Semigroup input, Monad m) => Semigroup (Environment m input) where
   NoEnvironment <> x = x
   x <> NoEnvironment = x
   (Environment env1) <> (Environment env2) =
-    Environment $ \id' ->
-      do
-        r1 <- (env1 id')
-        r2 <- (env2 id')
-        case (r1, r2) of
-          (Missing, Missing) -> pure Missing
-          (Default, Missing) -> pure Default
-          (Missing, Default) -> pure Default
-          (Default, Default) -> pure Default
-          (Found x, Found y) -> pure $ Found (x SG.<> y)
-          (Found x, _) -> pure $ Found x
-          (_, Found y) -> pure $ Found y
+    Environment $ \id' -> do
+      r1 <- (env1 id')
+      r2 <- (env2 id')
+      case (r1, r2) of
+        (Missing, Missing) -> pure Missing
+        (Default, Missing) -> pure Default
+        (Missing, Default) -> pure Default
+        (Default, Default) -> pure Default
+        (Found x, Found y) -> pure $ Found (x <> y)
+        (Found x, _) -> pure $ Found x
+        (_, Found y) -> pure $ Found y
 
 -- | Not quite sure when this is useful and so hard to say if the rules for combining things with Missing/Default are correct
-instance (SG.Semigroup input, Monad m) => Monoid (Environment m input) where
-
+instance (Semigroup input, Monad m) => Monoid (Environment m input) where
   mempty = NoEnvironment
-
-  mappend = (SG.<>)
+  mappend = (<>)
 
 -- | Utility function: returns the current 'FormId'. This will only make sense
 -- if the form is not composed
@@ -139,7 +134,7 @@ newtype View error v
   = View
       { unView :: [(FormRange, error)] -> v
       }
-  deriving (SG.Semigroup, Monoid, Functor)
+  deriving (Semigroup, Monoid, Functor)
 
 ------------------------------------------------------------------------------
 -- * Form
