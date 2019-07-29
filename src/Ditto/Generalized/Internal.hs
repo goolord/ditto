@@ -19,7 +19,7 @@ import qualified Data.IntSet as IS
 -- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.
 input
   :: (Monad m, FormError err)
-  => FormState m input FormId 
+  => FormState m input FormId
   -> (input -> Either err a)
   -> (FormId -> a -> view)
   -> a
@@ -40,7 +40,7 @@ input i' fromInput toView initialValue =
                 }
               )
           )
-      Found x -> case fromInput x of 
+      Found x -> case fromInput x of
         Right a -> pure
           ( View $ const $ toView i a
           , pure $
@@ -172,7 +172,7 @@ inputFile i' toView =
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
 inputMulti
-  :: forall m input err view a lbl. (Functor m, FormError err, ErrorInputType err ~ input, FormInput input, Monad m)
+  :: forall m input err view a lbl. (FormError err, ErrorInputType err ~ input, FormInput input, Monad m)
   => FormState m input FormId
   -> [(a, lbl)] -- ^ value, label, initially checked
   -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
@@ -229,7 +229,7 @@ inputMulti i' choices mkView isSelected =
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
-  :: forall a m err input lbl view. (Functor m, FormError err, ErrorInputType err ~ input, FormInput input, Monad m)
+  :: forall a m err input lbl view. (FormError err, ErrorInputType err ~ input, FormInput input, Monad m)
   => FormState m input FormId
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
@@ -304,7 +304,7 @@ inputChoice i' isDefault choices mkView =
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoiceForms
-  :: forall a m err input lbl view. (Functor m, Monad m, FormError err, ErrorInputType err ~ input, FormInput input)
+  :: forall a m err input lbl view. (Monad m, FormError err, ErrorInputType err ~ input, FormInput input)
   => FormState m input FormId
   -> a
   -> [(Form m input err view a, lbl)] -- ^ value, label
@@ -479,8 +479,8 @@ withErrors f form = Form $ do
   (View v, r) <- unForm form
   range <- getFormRange
   pure
-    ( View 
-        (\x -> 
+    ( View
+        (\x ->
           let errs = retainChildErrors range x
           in f (v x) errs
         )
