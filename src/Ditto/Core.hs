@@ -9,7 +9,7 @@ This module defines the 'Form' type, its instances, core manipulation functions,
 -}
 module Ditto.Core where
 
-import Control.Applicative (Applicative ((<*>), pure))
+import Control.Applicative (Applicative ((<*>), pure), empty, Alternative(..))
 import Control.Monad.Reader (MonadReader (ask), ReaderT, runReaderT)
 import Control.Monad.State (MonadState (get, put), StateT, evalStateT)
 import Control.Monad.Trans (lift)
@@ -173,43 +173,6 @@ newtype View error v
 newtype Form m input error view a = Form {unForm :: FormState m input (View error view, m (Result error (Proved a)))}
   deriving Functor
 
--- instance (Monad m) => Functor (Form m input view error) where
---   fmap f (Form frm) =
---     Form $ do
---       (view1, mval) <- frm
---       val <- lift $ lift $ mval
---       case val of
---         (Ok (Proved posi a)) -> pure (view1, pure $ Ok (Proved posi (f a)))
---         (Error errs) -> pure (view1, pure $ Error errs)
-
--- instance (Semigroup view, Monad m) => Applicative (Form m input error view) where
---   pure a =
---     Form $ do
---       i <- getFormId
---       pure (mempty, pure $ Ok (Proved (unitRange i) a))
---   (Form frmF) <*> (Form frmA) =
---     Form $ do
---       ((view1, mfok), (view2, maok)) <-
---         bracketState $ do
---           res1 <- frmF
---           incFormId
---           res2 <- frmA
---           pure (res1, res2)
---       fok <- lift $ lift $ mfok
---       aok <- lift $ lift $ maok
---       case (fok, aok) of
---         (Error errs1, Error errs2) -> pure (view1 <> view2, pure $ Error $ errs1 ++ errs2)
---         (Error errs1, _) -> pure (view1 <> view2, pure $ Error $ errs1)
---         (_, Error errs2) -> pure (view1 <> view2, pure $ Error $ errs2)
---         (Ok (Proved (FormRange x _) f), Ok (Proved (FormRange _ y) a)) ->
---           pure
---             ( view1 <> view2
---             , pure $ Ok $ Proved
---               { pos = FormRange x y
---               , unProved = f a
---               }
---             )
-
 bracketState :: Monad m => FormState m input a -> FormState m input a
 bracketState k = do
   FormRange startF1 _ <- get
@@ -254,21 +217,14 @@ instance (Functor m, Monoid view, Monad m) => Applicative (Form m input error vi
               }
             )
 
--- ???
-instance (Functor m, Monoid view, Monad m) => Monad (Form m input error view) where
-  formA >>= formFunction = do
-    Form $ do
-      (view0, mfok) <- unForm formA
-      fok :: Result error (Proved a) <- lift $ lift mfok
-      case fok of
-        Ok x -> do
-          (view1, mfok1) <- unForm $ formFunction $ unProved x
-          pure
-            ( view0 <> view1
-            , mfok1
-            )
-        Error errs -> do
-          pure (view0, pure $ Error errs)
+instance (Monad m, Monoid view) => Alternative (Form m input error view) where
+  empty = Form $ pure (mempty, pure $ Error mempty)
+  formA <|> formB = Form $ do
+    (_, mres0) <- unForm formA
+    res0 <- lift $ lift mres0
+    case res0 of
+      Ok _ -> unForm formA
+      Error _ -> unForm formB
 
 -- ** Ways to evaluate a Form
 
@@ -396,7 +352,7 @@ infixr 5 <++
 --
 -- This is useful for wrapping a form inside of a \<fieldset\> or other markup element.
 mapView
-  :: (Monad m, Functor m)
+  :: (Monad m)
   => (view -> view') -- ^ Manipulator
   -> Form m input error view a -- ^ Initial form
   -> Form m input error view' a -- ^ Resulting form
