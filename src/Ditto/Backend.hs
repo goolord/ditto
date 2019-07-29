@@ -1,6 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 {- |
 This module contains two classes. 'FormInput' is a class which is parameterized over the @input@ type used to represent form data in different web frameworks. There should be one instance for each framework, such as Happstack, Snap, WAI, etc.
@@ -55,12 +56,10 @@ commonFormErrorText showInput cfe = case cfe of
   MissingDefaultValue -> "Missing default value."
 
 -- | A Class to lift a 'CommonFormError' into an application-specific error type
-class FormError e where
-  type ErrorInputType e
-  commonFormError :: (CommonFormError (ErrorInputType e)) -> e
+class FormError err input | err -> input where
+  commonFormError :: CommonFormError input -> err
 
-instance FormError Text where
-  type ErrorInputType Text = Text
+instance FormError Text Text where
   commonFormError = commonFormErrorText id
 
 -- | Class which all backends should implement.
@@ -74,7 +73,7 @@ class FormInput input where
   -- | Parse the input into a string. This is used for simple text fields
   -- among other things
   --
-  getInputString :: (FormError error, ErrorInputType error ~ input) => input -> Either error String
+  getInputString :: (FormError error input) => input -> Either error String
   getInputString input =
     case getInputStrings input of
       [] -> Left (commonFormError $ NoStringFound input)
@@ -87,7 +86,7 @@ class FormInput input where
 
   -- | Parse the input value into 'Text'
   --
-  getInputText :: (FormError error, ErrorInputType error ~ input) => input -> Either error Text
+  getInputText :: (FormError error input) => input -> Either error Text
   getInputText input =
     case getInputTexts input of
       [] -> Left (commonFormError $ NoStringFound input)
@@ -101,4 +100,4 @@ class FormInput input where
 
   -- | Get a file descriptor for an uploaded file
   --
-  getInputFile :: (FormError error, ErrorInputType error ~ input) => input -> Either error (FileType input)
+  getInputFile :: (FormError error input) => input -> Either error (FileType input)
