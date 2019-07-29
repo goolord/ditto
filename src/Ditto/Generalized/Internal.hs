@@ -60,6 +60,51 @@ input i' fromInput toView initialValue =
         , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
         )
 
+inputMaybeReq
+  :: (Monad m, FormError err)
+  => FormState m input FormId
+  -> (input -> Either err a)
+  -> (FormId -> Maybe a -> view)
+  -> Maybe a
+  -> Form m input err view a
+inputMaybeReq i' fromInput toView initialValue =
+  Form $ do
+    i <- i'
+    v <- getFormInput' i
+    case v of
+      Default ->
+        pure
+          ( View $ const $ toView i initialValue
+          , case initialValue of 
+              Just x -> pure $
+                Ok ( Proved
+                       { pos = unitRange i
+                       , unProved = x
+                       }
+                   )
+              Nothing -> pure $ Error [(unitRange i, commonFormError MissingDefaultValue)]
+          )
+      Found x -> case fromInput x of
+        Right a -> pure
+          ( View $ const $ toView i (Just a)
+          , pure $
+            Ok
+              ( Proved
+                { pos = unitRange i
+                , unProved = a
+                }
+              )
+          )
+        Left err -> pure
+          ( View $ const $ toView i initialValue
+          , pure $ Error [(unitRange i, err)]
+          )
+      Missing -> pure
+        ( View $ const $ toView i initialValue
+        , pure $ Error [(unitRange i, commonFormError (InputMissing i))]
+        )
+
+
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
 inputMaybe
   :: (Monad m, FormError err)

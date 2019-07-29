@@ -15,6 +15,17 @@ import qualified Ditto.Generalized.Internal as G
 input :: (Monad m, FormError err) => String -> (input -> Either err a) -> (FormId -> a -> view) -> a -> Form m input err view a
 input name = G.input (getNamedFormId name)
 
+
+-- | used to construct elements with optional initial values, which are still required
+inputMaybeReq
+  :: (Monad m, FormError err)
+  => String
+  -> (input -> Either err a)
+  -> (FormId -> Maybe a -> view)
+  -> Maybe a
+  -> Form m input err view a
+inputMaybeReq name = G.inputMaybeReq (getNamedFormId name)
+
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
 inputMaybe
   :: (Monad m, FormError err)

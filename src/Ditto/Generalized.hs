@@ -23,6 +23,15 @@ inputMaybe
   -> Form m input err view (Maybe a)
 inputMaybe = G.inputMaybe getFormId
 
+-- | used to construct elements with optional initial values, which are still required
+inputMaybeReq
+  :: (Monad m, FormError err)
+  => (input -> Either err a)
+  -> (FormId -> Maybe a -> view)
+  -> Maybe a
+  -> Form m input err view a
+inputMaybeReq = G.inputMaybeReq getFormId
+
 -- | used for elements like @\<input type=\"reset\"\>@ which take a value, but are never present in the form data set.
 inputNoData
   :: (Monad m)
