@@ -245,7 +245,6 @@ instance (Monad m, Monoid view) => Monad (MForm m input err view) where
           )
       Error errs -> pure (view0, pure $ Error errs) 
 
-
 runAsMForm
   :: (Monad m)
   => Environment m input
@@ -257,7 +256,6 @@ runAsMForm env prefix' = runForm env prefix' . runMForm . MForm
 -- ** Ways to evaluate a Form
 
 -- | Run a form
---
 runForm
   :: (Monad m)
   => Environment m input
@@ -268,7 +266,6 @@ runForm env prefix' form =
   evalStateT (runReaderT (unForm form) env) (unitRange (zeroId $ unpack prefix'))
 
 -- | Run a form
---
 runForm'
   :: (Monad m)
   => Environment m input
@@ -344,7 +341,7 @@ view view' = Form $ do
 -- element.
 (++>)
   :: (Monad m, Semigroup view)
-  => Form m input err view ()
+  => Form m input err view z
   -> Form m input err view a
   -> Form m input err view a
 f1 ++> f2 = Form $ do
@@ -356,11 +353,10 @@ f1 ++> f2 = Form $ do
 infixl 6 ++>
 
 -- | Append a unit form to the right. See '++>'.
---
 (<++)
   :: (Monad m, Semigroup view)
   => Form m input err view a
-  -> Form m input err view ()
+  -> Form m input err view z
   -> Form m input err view a
 f1 <++ f2 = Form $ do
   -- Evaluate the form that matters first, so we have a correct range set
