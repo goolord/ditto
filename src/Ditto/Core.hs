@@ -24,11 +24,10 @@ import Ditto.Result (FormId (..), FormRange (..), Result (..), unitRange, zeroId
 ------------------------------------------------------------------------------
 
 -- | Proved records a value, the location that value came from, and something that was proved about the value.
-data Proved a
-  = Proved
-      { pos :: FormRange
-      , unProved :: a
-      }
+data Proved a = Proved
+  { pos :: FormRange
+  , unProved :: a
+  }
   deriving (Show, Functor)
 
 -- | Utility Function: trivially prove nothing about ()
@@ -66,8 +65,7 @@ getFormInput' id' = do
   env <- ask
   case env of
     NoEnvironment -> pure Default
-    Environment f ->
-      lift $ lift $ f id'
+    Environment f -> lift $ lift $ f id'
 
 -- | Utility function: Get the current range
 --
@@ -186,7 +184,6 @@ instance (Functor m, Monoid view, Monad m) => Applicative (Form m input error vi
           }
         )
 
-  -- this coud be defined in terms of <<*>> if we just changed the proof of frmF to (() -> ())
   (Form frmF) <*> (Form frmA) =
     Form $ do
       ((view1, mfok), (view2, maok)) <-
@@ -218,6 +215,10 @@ instance (Monad m, Monoid view) => Alternative (Form m input error view) where
     case res0 of
       Ok _ -> unForm formA
       Error _ -> unForm formB
+
+instance Functor m => Bifunctor (Form m input err) where
+  first = mapView
+  second = fmap
 
 -- ** Ways to evaluate a Form
 
@@ -345,7 +346,7 @@ infixr 5 <++
 --
 -- This is useful for wrapping a form inside of a \<fieldset\> or other markup element.
 mapView
-  :: (Monad m)
+  :: (Functor m)
   => (view -> view') -- ^ Manipulator
   -> Form m input error view a -- ^ Initial form
   -> Form m input error view' a -- ^ Resulting form
