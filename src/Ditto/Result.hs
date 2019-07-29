@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveFunctor #-}
+
 -- | Module for the core result type, and related functions
 --
 module Ditto.Result
@@ -26,11 +28,7 @@ import qualified Data.List.NonEmpty as NE
 data Result e ok
   = Error [(FormRange, e)]
   | Ok ok
-  deriving (Show, Eq)
-
-instance Functor (Result e) where
-  fmap _ (Error x) = Error x
-  fmap f (Ok x) = Ok (f x)
+  deriving (Show, Eq, Functor)
 
 instance Monad (Result e) where
   return = Ok

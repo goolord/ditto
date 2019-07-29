@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LambdaCase #-}
@@ -29,10 +30,7 @@ data Proved a
       { pos :: FormRange
       , unProved :: a
       }
-  deriving Show
-
-instance Functor Proved where
-  fmap f (Proved posi a) = Proved posi (f a)
+  deriving (Show, Functor)
 
 -- | Utility Function: trivially prove nothing about ()
 unitProved :: FormId -> Proved ()
@@ -141,10 +139,7 @@ newtype View error v
   = View
       { unView :: [(FormRange, error)] -> v
       }
-  deriving (SG.Semigroup, Monoid)
-
-instance Functor (View e) where
-  fmap f (View g) = View $ f . g
+  deriving (SG.Semigroup, Monoid, Functor)
 
 ------------------------------------------------------------------------------
 -- * Form
@@ -176,6 +171,7 @@ instance Functor (View e) where
 -- applicative functor and can be used almost exactly like
 -- @digestive-functors <= 0.2@.
 newtype Form m input error view a = Form {unForm :: FormState m input (View error view, m (Result error (Proved a)))}
+  deriving Functor
 
 bracketState :: Monad m => FormState m input a -> FormState m input a
 bracketState k = do
@@ -185,11 +181,7 @@ bracketState k = do
   put $ FormRange startF1 endF2
   pure res
 
-instance (Functor m) => Functor (Form m input error view) where
-  fmap f form =
-    Form $ fmap (second (fmap (fmap (fmap f)))) (unForm form)
-
-instance (Monoid view, Monad m, x ~ ()) => Applicative (Form m input error view) where
+instance (Functor m, Monoid view, Monad m) => Applicative (Form m input error view) where
   pure a =
     Form $ do
       i <- getFormId
