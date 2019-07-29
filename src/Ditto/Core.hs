@@ -8,7 +8,7 @@ This module defines the 'Form' type, its instances, core manipulation functions,
 -}
 module Ditto.Core where
 
-import Control.Applicative (Applicative ((<*>), pure))
+import Control.Applicative (Applicative ((<*>), pure), empty, Alternative(..))
 import Control.Monad.Reader (MonadReader (ask), ReaderT, runReaderT)
 import Control.Monad.State (MonadState (get, put), StateT, evalStateT)
 import Control.Monad.Trans (lift)
@@ -275,8 +275,22 @@ instance (Functor m, Monoid view, Monad m, x ~ ()) => Monad (Form m input error 
             ( view0 <> view1
             , mfok1
             )
-        Error errs -> do
-          pure (view0, pure $ Error errs)
+        Error _ -> do
+          (view1, mfok1) <- unForm $ formFunction =<< empty
+          pure
+            ( view0 <> view1
+            , mfok1
+            )
+          -- pure (view0, pure $ Error errs)
+
+instance (Monad m, Monoid view) => Alternative (Form m input error view) where
+  empty = Form $ pure (mempty, pure $ Error mempty)
+  formA <|> formB = Form $ do
+    (_, mres0) <- unForm formA
+    res0 <- lift $ lift mres0
+    case res0 of
+      Ok _ -> unForm formA
+      Error _ -> unForm formB
 
 -- ** Ways to evaluate a Form
 
