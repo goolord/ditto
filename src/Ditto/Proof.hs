@@ -10,9 +10,9 @@ A 'Proof' does three things:
 module Ditto.Proof where
 
 import Control.Monad.Trans (lift)
-import Numeric (readDec, readFloat, readSigned)
 import Ditto.Core (Form (..), Proved (..))
 import Ditto.Result (Result (..))
+import Numeric (readDec, readFloat, readSigned)
 
 -- | A 'Proof' attempts to prove something about a value.
 --
