@@ -1,5 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {- |
 This module defines the 'Form' type, its instances, core manipulation functions, and a bunch of helper utilities.
@@ -259,6 +261,22 @@ instance (Functor m, Monoid view, Monad m, x ~ ()) => Applicative (Form m input 
               , unProved = f a
               }
             )
+
+-- ???
+instance (Functor m, Monoid view, Monad m, x ~ ()) => Monad (Form m input error view) where
+  formA >>= formFunction = do
+    Form $ do
+      (view0, mfok) <- unForm formA
+      fok :: Result error (Proved a) <- lift $ lift mfok
+      case fok of
+        Ok x -> do
+          (view1, mfok1) <- unForm $ formFunction $ unProved x
+          pure
+            ( view0 <> view1
+            , mfok1
+            )
+        Error errs -> do
+          pure (view0, pure $ Error errs)
 
 -- ** Ways to evaluate a Form
 

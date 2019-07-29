@@ -18,16 +18,15 @@ input = G.input getFormId
 inputMaybe
   :: (Monad m, FormError err)
   => (input -> Either err a)
-  -> (FormId -> a -> view)
-  -> a
+  -> (FormId -> Maybe a -> view)
+  -> Maybe a
   -> Form m input err view (Maybe a)
 inputMaybe = G.inputMaybe getFormId
 
 -- | used for elements like @\<input type=\"reset\"\>@ which take a value, but are never present in the form data set.
 inputNoData
   :: (Monad m)
-  => (FormId -> a -> view)
-  -> a
+  => (FormId -> view)
   -> Form m input err view ()
 inputNoData = G.inputNoData getFormId
 
@@ -97,3 +96,4 @@ withErrors
   -> Form m input err view a
   -> Form m input err view a
 withErrors = G.withErrors
+

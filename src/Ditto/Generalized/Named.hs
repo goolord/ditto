@@ -20,8 +20,8 @@ inputMaybe
   :: (Monad m, FormError err)
   => String
   -> (input -> Either err a)
-  -> (FormId -> a -> view)
-  -> a
+  -> (FormId -> Maybe a -> view)
+  -> Maybe a
   -> Form m input err view (Maybe a)
 inputMaybe name = G.inputMaybe (getNamedFormId name)
 
@@ -29,8 +29,7 @@ inputMaybe name = G.inputMaybe (getNamedFormId name)
 inputNoData
   :: (Monad m)
   => String
-  -> (FormId -> a -> view)
-  -> a
+  -> (FormId -> view)
   -> Form m input err view ()
 inputNoData name = G.inputNoData (getNamedFormId name)
 

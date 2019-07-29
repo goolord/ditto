@@ -65,8 +65,8 @@ inputMaybe
   :: (Monad m, FormError err)
   => FormState m input FormId
   -> (input -> Either err a)
-  -> (FormId -> a -> view)
-  -> a
+  -> (FormId -> Maybe a -> view)
+  -> Maybe a
   -> Form m input err view (Maybe a)
 inputMaybe i' fromInput toView initialValue =
   Form $ do
@@ -79,13 +79,13 @@ inputMaybe i' fromInput toView initialValue =
             Ok
               ( Proved
                 { pos = unitRange i
-                , unProved = Just initialValue
+                , unProved = initialValue
                 }
               )
           )
       Found x -> case fromInput x of
         Right a -> pure
-          ( View $ const $ toView i a
+          ( View $ const $ toView i (Just a)
           , pure $
             Ok
               ( Proved
@@ -113,14 +113,13 @@ inputMaybe i' fromInput toView initialValue =
 inputNoData
   :: (Monad m)
   => FormState m input FormId
-  -> (FormId -> a -> view)
-  -> a
+  -> (FormId -> view)
   -> Form m input err view ()
-inputNoData i' toView a =
+inputNoData i' toView =
   Form $ do
     i <- i'
     pure
-      ( View $ const $ toView i a
+      ( View $ const $ toView i
       , pure $
         Ok
           ( Proved
@@ -487,3 +486,4 @@ withErrors f form = Form $ do
         )
     , r
     )
+
