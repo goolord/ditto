@@ -275,6 +275,7 @@ inputMulti i' choices mkView isSelected =
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
   :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m)
+  => Show err
   => FormState m input FormId
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
@@ -301,13 +302,14 @@ inputChoice i' isDefault choices mkView =
           let readDec' :: String -> Int
               readDec' str' = case readDec str' of
                 [(n, [])] -> n
-                _ -> (-1) -- FIXME: should probably pure an internal err?
+                x -> error $ "ditto: nan" <> show x
               estr = getInputString v :: Either err String
-              key = second readDec' estr
+              key' = second readDec' estr
+              key = either (error . show) id key'
               (choices', mval) =
                 foldr
                   ( \(i0, (a, lbl)) (c, v0) ->
-                    if either (const False) (==i0) key
+                    if i0 == key
                     then ((a, lbl, True) : c, Just a)
                     else ((a, lbl, False) : c, v0)
                   )
@@ -320,7 +322,7 @@ inputChoice i' isDefault choices mkView =
                 ( View $ const view'
                 , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
                 )
-            (Just val) -> mkOk i view' val
+            Just val -> mkOk i view' val
   where
     mkOk' i view' (Just val) = mkOk i view' val
     mkOk' i view' Nothing =
