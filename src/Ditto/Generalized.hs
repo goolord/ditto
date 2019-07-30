@@ -58,7 +58,6 @@ inputMulti = G.inputMulti getFormId
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
   :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m)
-  => Show err
   => (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
   -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view

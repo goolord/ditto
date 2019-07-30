@@ -65,7 +65,6 @@ inputMulti name = G.inputMulti (getNamedFormId name)
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
   :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m)
-  => Show err 
   => String
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
