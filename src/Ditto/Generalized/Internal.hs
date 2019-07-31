@@ -220,7 +220,7 @@ inputMulti
   :: forall m input err view a lbl. (FormError input err, FormInput input, Monad m)
   => FormState m input FormId
   -> [(a, lbl)] -- ^ value, label, initially checked
-  -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
+  -> (FormId -> [Choice lbl a] -> view) -- ^ function which generates the view
   -> (a -> Bool) -- ^ isChecked/isSelected initially
   -> Form m input err view [a]
 inputMulti i' choices mkView isSelected =
@@ -263,14 +263,21 @@ inputMulti i' choices mkView isSelected =
         view' <- mkView i <$> augmentChoices choices'
         mkOk i view' vals
   where
-    augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m input [(FormId, Int, lbl, Bool)]
+    augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m input [Choice lbl a]
     augmentChoices choices' = mapM augmentChoice (zip [0..] choices')
-    augmentChoice :: (Monad m) => (Int, (a, lbl, Bool)) -> FormState m input (FormId, Int, lbl, Bool)
-    augmentChoice (vl, (_, lbl, checked)) =
-      do
-        incFormId
-        i <- i'
-        pure (i, vl, lbl, checked)
+    augmentChoice :: (Monad m) => (Int, (a, lbl, Bool)) -> FormState m input (Choice lbl a)
+    augmentChoice (vl, (a, lbl, selected)) = do
+      incFormId
+      i <- i'
+      pure $ Choice i vl lbl selected a
+
+data Choice lbl a = Choice
+  { choiceFormId :: FormId
+  , choiceIndex :: Int
+  , choiceLabel :: lbl
+  , choiceIsSelected :: Bool
+  , choiceVal :: a
+  }
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
@@ -278,7 +285,7 @@ inputChoice
   => FormState m input FormId
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
-  -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
+  -> (FormId -> [Choice lbl a] -> view) -- ^ function which generates the view
   -> Form m input err view a
 inputChoice i' isDefault choices mkView =
   Form $ do
@@ -338,14 +345,13 @@ inputChoice i' isDefault choices mkView =
         )
         ([], Nothing)
         cs
-    augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m input [(FormId, Int, lbl, Bool)]
+    augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m input [Choice lbl a]
     augmentChoices choices' = mapM augmentChoice (zip [0..] choices')
-    augmentChoice :: (Monad m) => (Int, (a, lbl, Bool)) -> FormState m input (FormId, Int, lbl, Bool)
-    augmentChoice (vl, (_a, lbl, selected)) =
-      do
-        incFormId
-        i <- i'
-        pure (i, vl, lbl, selected)
+    augmentChoice :: (Monad m) => (Int, (a, lbl, Bool)) -> FormState m input (Choice lbl a)
+    augmentChoice (vl, (a, lbl, selected)) = do
+      incFormId
+      i <- i'
+      pure $ Choice i vl lbl selected a
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoiceForms

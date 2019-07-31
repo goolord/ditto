@@ -3,7 +3,21 @@
 
 -- This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
 
-module Ditto.Generalized where
+module Ditto.Generalized 
+  ( G.Choice(..)
+  , input
+  , inputMaybe
+  , inputMaybeReq
+  , inputNoData
+  , inputFile
+  , inputMulti
+  , inputChoice
+  , inputChoiceForms
+  , label
+  , errors
+  , childErrors
+  , withErrors
+  ) where
 
 import Ditto.Backend
 import Ditto.Core
@@ -50,7 +64,7 @@ inputFile = G.inputFile getFormId
 inputMulti
   :: forall m input err view a lbl. (FormError input err, FormInput input, Monad m)
   => [(a, lbl)] -- ^ value, label, initially checked
-  -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
+  -> (FormId -> [G.Choice lbl a] -> view) -- ^ function which generates the view
   -> (a -> Bool) -- ^ isChecked/isSelected initially
   -> Form m input err view [a]
 inputMulti = G.inputMulti getFormId
@@ -60,7 +74,7 @@ inputChoice
   :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m)
   => (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
-  -> (FormId -> [(FormId, Int, lbl, Bool)] -> view) -- ^ function which generates the view
+  -> (FormId -> [G.Choice lbl a] -> view) -- ^ function which generates the view
   -> Form m input err view a
 inputChoice = G.inputChoice getFormId
 
