@@ -14,7 +14,7 @@ import Numeric (readDec)
 import Ditto.Backend
 import Ditto.Core
 import Ditto.Result
-import qualified Data.IntSet as IS
+import Data.List (elem)
 
 -- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.
 input
@@ -217,13 +217,14 @@ inputFile i' toView =
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
 inputMulti
-  :: forall m input err view a lbl. (FormError input err, FormInput input, Monad m)
+  :: forall m input err view a lbl. (FormError input err, FormInput input, Monad m, Eq a)
   => FormState m input FormId
   -> [(a, lbl)] -- ^ value, label, initially checked
+  -> (input -> Either err [a])
   -> (FormId -> [Choice lbl a] -> view) -- ^ function which generates the view
   -> (a -> Bool) -- ^ isChecked/isSelected initially
   -> Form m input err view [a]
-inputMulti i' choices mkView isSelected =
+inputMulti i' choices fromInput mkView isSelected =
   Form $ do
     i <- i'
     inp <- getFormInput' i
@@ -241,39 +242,34 @@ inputMulti i' choices mkView isSelected =
                   choices
           view' <- mkView i <$> augmentChoices choices'
           mkOk i view' vals
-      Missing ->
+      Missing -> do
         -- just means that no checkboxes were checked
-        do
-          view' <- mkView i <$> augmentChoices (map (\(x, y) -> (x, y, False)) choices)
-          mkOk i view' []
+        view' <- mkView i <$> augmentChoices (map (\(x, y) -> (x, y, False)) choices)
+        mkOk i view' []
       Found v -> do
-        let readDec' str = case readDec str of
-              [(n, [])] -> n
-              _ -> (-1) -- FIXME: should probably pure an internal err?
-            keys = IS.fromList $ map readDec' $ getInputStrings v
+        let keys = either (const []) id $ fromInput v
             (choices', vals) =
               foldr
-                ( \(i0, (a, lbl)) (c, v0) ->
-                  if IS.member i0 keys
+                ( \(a, lbl) (c, v0) ->
+                  if a `elem` keys
                   then ((a, lbl, True) : c, a : v0)
                   else ((a, lbl, False) : c, v0)
                 )
                 ([], []) $
-                zip [0..] choices
+                choices
         view' <- mkView i <$> augmentChoices choices'
         mkOk i view' vals
   where
     augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m input [Choice lbl a]
-    augmentChoices choices' = mapM augmentChoice (zip [0..] choices')
-    augmentChoice :: (Monad m) => (Int, (a, lbl, Bool)) -> FormState m input (Choice lbl a)
-    augmentChoice (vl, (a, lbl, selected)) = do
+    augmentChoices choices' = mapM augmentChoice choices'
+    augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m input (Choice lbl a)
+    augmentChoice (a, lbl, selected) = do
       incFormId
       i <- i'
-      pure $ Choice i vl lbl selected a
+      pure $ Choice i lbl selected a
 
 data Choice lbl a = Choice
   { choiceFormId :: FormId
-  , choiceIndex :: Int
   , choiceLabel :: lbl
   , choiceIsSelected :: Bool
   , choiceVal :: a
@@ -281,13 +277,14 @@ data Choice lbl a = Choice
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
-  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m)
+  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a)
   => FormState m input FormId
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
+  -> (input -> Either err a)
   -> (FormId -> [Choice lbl a] -> view) -- ^ function which generates the view
   -> Form m input err view a
-inputChoice i' isDefault choices mkView =
+inputChoice i' isDefault choices fromInput mkView =
   Form $ do
     i <- i'
     inp <- getFormInput' i
@@ -305,21 +302,16 @@ inputChoice i' isDefault choices mkView =
           mkOk' i view' def
       Found v ->
         do
-          let readDec' :: String -> Int
-              readDec' str' = case readDec str' of
-                [(n, [])] -> n
-                _ -> (-1) -- FIXME: should probably pure an internal err?
-              estr = getInputString v :: Either err String
-              key = second readDec' estr
+          let key = fromInput v
               (choices', mval) =
                 foldr
-                  ( \(i0, (a, lbl)) (c, v0) ->
-                    if either (const False) (==i0) key
+                  ( \(a, lbl) (c, v0) ->
+                    if either (const False) (==a) key
                     then ((a, lbl, True) : c, Just a)
                     else ((a, lbl, False) : c, v0)
                   )
                   ([], Nothing) $
-                  zip [0..] choices
+                  choices
           view' <- mkView i <$> augmentChoices choices'
           case mval of
             Nothing ->
@@ -346,12 +338,12 @@ inputChoice i' isDefault choices mkView =
         ([], Nothing)
         cs
     augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m input [Choice lbl a]
-    augmentChoices choices' = mapM augmentChoice (zip [0..] choices')
-    augmentChoice :: (Monad m) => (Int, (a, lbl, Bool)) -> FormState m input (Choice lbl a)
-    augmentChoice (vl, (a, lbl, selected)) = do
+    augmentChoices choices' = mapM augmentChoice choices'
+    augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m input (Choice lbl a)
+    augmentChoice (a, lbl, selected) = do
       incFormId
       i <- i'
-      pure $ Choice i vl lbl selected a
+      pure $ Choice i lbl selected a
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoiceForms

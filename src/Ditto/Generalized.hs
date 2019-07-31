@@ -62,8 +62,9 @@ inputFile = G.inputFile getFormId
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
 inputMulti
-  :: forall m input err view a lbl. (FormError input err, FormInput input, Monad m)
+  :: forall m input err view a lbl. (FormError input err, FormInput input, Monad m, Eq a)
   => [(a, lbl)] -- ^ value, label, initially checked
+  -> (input -> Either err [a])
   -> (FormId -> [G.Choice lbl a] -> view) -- ^ function which generates the view
   -> (a -> Bool) -- ^ isChecked/isSelected initially
   -> Form m input err view [a]
@@ -71,9 +72,10 @@ inputMulti = G.inputMulti getFormId
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
-  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m)
+  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a)
   => (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
+  -> (input -> Either err a)
   -> (FormId -> [G.Choice lbl a] -> view) -- ^ function which generates the view
   -> Form m input err view a
 inputChoice = G.inputChoice getFormId
