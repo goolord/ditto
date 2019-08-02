@@ -63,7 +63,7 @@ zeroId prefix = FormId prefix (pure 0)
 -- | map a function over the @NonEmpty Int@ inside a 'FormId'
 mapId :: (NonEmpty Int -> NonEmpty Int) -> FormId -> FormId
 mapId f (FormId p is) = FormId p $ f is
-mapId _ x = x
+mapId f (FormIdCustom n i) = let (i' :| _) = f (pure i) in FormIdCustom n i'
 
 instance Show FormId where
   show (FormId p xs) =
@@ -86,7 +86,7 @@ data FormRange
 -- | Increment a form ID
 incrementFormId :: FormId -> FormId
 incrementFormId (FormId p (x :| xs)) = FormId p $ (x + 1) :| xs
-incrementFormId x@FormIdCustom{} = x
+incrementFormId (FormIdCustom n x) = FormIdCustom n (x + 1)
 
 -- | create a 'FormRange' from a 'FormId'
 unitRange :: FormId -> FormRange
