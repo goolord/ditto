@@ -18,7 +18,7 @@ module Ditto.Result
   )
 where
 
-import Data.List (intercalate)
+import Data.List (intercalate, foldl')
 import Control.Applicative (Applicative (..))
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NE
@@ -71,7 +71,7 @@ instance Show FormId where
   show (FormIdCustom x _) = x
 
 reverseMap :: Foldable t => (a -> b) -> t a -> [b]
-reverseMap f = foldl (\as a -> f a : as ) []
+reverseMap f = foldl' (\as a -> f a : as ) []
 
 -- | get the head 'Int' from a 'FormId'
 formId :: FormId -> Int

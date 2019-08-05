@@ -223,13 +223,13 @@ instance Functor m => Bifunctor (Form m input err) where
 instance (Monad m, Monoid view, Semigroup a) => Semigroup (Form m input err view a) where
   (<>) = liftA2 (<>)
 
-instance (Monoid view, Monad m, Semigroup a) => Monoid (Form m input err view a) where
-  mempty = Form $ pure (mempty, pure $ Error mempty)
+instance (Monoid view, Monad m, Monoid a) => Monoid (Form m input err view a) where
+  mempty = pure mempty
 
 -- | This provides a Monad instance which will stop rendering on err.
 --   This instance isn't a part of @Form@ because of its undesirable behavior.
 --   @-XApplicativeDo@ is generally preferred
-newtype MForm m input err view a = MForm { runMForm :: Form m input err view a }
+newtype MForm m input err view a = MForm { getMForm :: Form m input err view a }
   deriving (Functor, Bifunctor, Alternative, Applicative)
 
 instance (Monad m, Monoid view) => Monad (MForm m input err view) where
@@ -238,20 +238,20 @@ instance (Monad m, Monoid view) => Monad (MForm m input err view) where
     fok :: Result err (Proved a) <- lift $ lift mfok
     case fok of
       Ok x -> do
-        (view1, mfok1) <- unForm $ runMForm $ formFunction $ unProved x
+        (view1, mfok1) <- unForm $ getMForm $ formFunction $ unProved x
         pure
           ( view0 <> view1
           , mfok1
           )
       Error errs -> pure (view0, pure $ Error errs) 
 
-runAsMForm
+runMForm
   :: (Monad m)
   => Environment m input
   -> Text
-  -> Form m input err view a
+  -> MForm m input err view a
   -> m (View err view, m (Result err (Proved a)))
-runAsMForm env prefix' = runForm env prefix' . runMForm . MForm
+runMForm env prefix' = runForm env prefix' . getMForm 
 
 -- ** Ways to evaluate a Form
 

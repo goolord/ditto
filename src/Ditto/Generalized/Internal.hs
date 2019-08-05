@@ -300,26 +300,37 @@ inputChoice i' isDefault choices fromInput mkView =
           let (choices', def) = markSelected choices
           view' <- mkView i <$> augmentChoices choices'
           mkOk' i view' def
-      Found v ->
-        do
-          let key = fromInput v
-              (choices', mval) =
-                foldr
-                  ( \(a, lbl) (c, v0) ->
-                    if either (const False) (==a) key
-                    then ((a, lbl, True) : c, Just a)
-                    else ((a, lbl, False) : c, v0)
+      Found v -> do
+        case fromInput v of
+          Left err -> do
+            let choices' =
+                  foldr
+                    ( \(a, lbl) c -> (a, lbl, False) : c )
+                    []
+                    choices
+            view' <- mkView i <$> augmentChoices choices'
+            pure
+              ( View $ const view'
+              , pure $ Error [(unitRange i, err)]
+              )
+          Right key -> do
+            let (choices', mval) =
+                  foldr
+                    ( \(a, lbl) (c, v0) ->
+                      if key == a
+                      then ((a, lbl, True) : c, Just a)
+                      else ((a, lbl, False) : c, v0)
+                    )
+                    ([], Nothing) $
+                    choices
+            view' <- mkView i <$> augmentChoices choices'
+            case mval of
+              Nothing ->
+                pure
+                  ( View $ const view'
+                  , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
                   )
-                  ([], Nothing) $
-                  choices
-          view' <- mkView i <$> augmentChoices choices'
-          case mval of
-            Nothing ->
-              pure
-                ( View $ const view'
-                , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
-                )
-            (Just val) -> mkOk i view' val
+              (Just val) -> mkOk i view' val
   where
     mkOk' i view' (Just val) = mkOk i view' val
     mkOk' i view' Nothing =
@@ -435,42 +446,23 @@ inputChoiceForms i' def choices mkView =
         iview <- getFormId
         pure (i, vl, iview, frm, lbl, selected)
 
-{-
-              case inp of
-                (Found v) ->
-                    do let readDec' str = case readDec str of
-                                            [(n,[])] -> n
-                                            _ -> (-1) -- FIXME: should probably pure an internal err?
-                           (Right str) = getInputString v :: Either err String -- FIXME
-                           key = readDec' str
-                           (choices', mval) =
-                               foldr (\(i, (a, lbl)) (c, v) ->
-                                          if i == key
-                                          then ((a,lbl,True) : c, Just a)
-                                          else ((a,lbl,False): c,     v))
-                                     ([], Nothing) $
-                                     zip [0..] choices
-
-
--}
 -- | used to create @\<label\>@ elements
 label
   :: Monad m
   => FormState m input FormId
   -> (FormId -> view)
   -> Form m input err view ()
-label i' f =
-  Form $ do
-    id' <- i'
-    pure
-      ( View (const $ f id')
-      , pure
-        ( Ok $ Proved
-          { pos = unitRange id'
-          , unProved = ()
-          }
-        )
+label i' f = Form $ do
+  id' <- i'
+  pure
+    ( View (const $ f id')
+    , pure
+      ( Ok $ Proved
+        { pos = unitRange id'
+        , unProved = ()
+        }
       )
+    )
 
 -- | used to add a list of err messages to a 'Form'
 --
@@ -481,36 +473,34 @@ errors
   :: Monad m
   => ([err] -> view) -- ^ function to convert the err messages into a view
   -> Form m input err view ()
-errors f =
-  Form $ do
-    range <- getFormRange
-    pure
-      ( View (f . retainErrors range)
-      , pure
-        ( Ok $ Proved
-          { pos = range
-          , unProved = ()
-          }
-        )
+errors f = Form $ do
+  range <- getFormRange
+  pure
+    ( View (f . retainErrors range)
+    , pure
+      ( Ok $ Proved
+        { pos = range
+        , unProved = ()
+        }
       )
+    )
 
 -- | similar to 'errors' but includes err messages from children of the form as well.
 childErrors
   :: Monad m
   => ([err] -> view)
   -> Form m input err view ()
-childErrors f =
-  Form $ do
-    range <- getFormRange
-    pure
-      ( View (f . retainChildErrors range)
-      , pure
-        ( Ok $ Proved
-          { pos = range
-          , unProved = ()
-          }
-        )
+childErrors f = Form $ do
+  range <- getFormRange
+  pure
+    ( View (f . retainChildErrors range)
+    , pure
+      ( Ok $ Proved
+        { pos = range
+        , unProved = ()
+        }
       )
+    )
 
 -- | modify the view of a form based on its errors
 withErrors
