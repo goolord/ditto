@@ -4,9 +4,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{- |
-This module defines the 'Form' type, its instances, core manipulation functions, and a bunch of helper utilities.
--}
+-- | This module defines the 'Form' type, its instances, core manipulation functions, and a bunch of helper utilities.
 module Ditto.Core where
 
 import Control.Applicative (Applicative(..), Alternative(..))

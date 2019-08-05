@@ -9,7 +9,7 @@ module Ditto.Result
   , FormId (..)
   , zeroId
   , mapId
-  , FormRange (..)
+  , FormRange(..)
   , incrementFormId
   , unitRange
   , isInRange

@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DoAndIfThenElse #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
 
@@ -514,13 +515,3 @@ withErrors f form = Form $ do
     , r
     )
 
--- (++>)
-  -- :: (Monad m, Semigroup view)
-  -- => Form m input err view z
-  -- -> Form m input err view a
-  -- -> Form m input err view a
--- f1 ++> f2 = Form $ do
-  -- -- Evaluate the form that matters first, so we have a correct range set
-  -- (v2, r) <- unForm f2
-  -- (v1, _) <- unForm f1
-  -- pure (v1 <> v2, r)

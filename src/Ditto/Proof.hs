@@ -58,23 +58,13 @@ prove (Form frm) (Proof f) =
 
 -- * transformations (proofs minus the proof).
 
--- | transform a 'Form' using a 'Proof', and the replace the proof with @()@.
---
--- This is useful when you want just want classic digestive-functors behaviour.
-transform
-  :: (Monad m)
-  => Form m input error view a
-  -> Proof m error a b
-  -> Form m input error view b
-transform frm proof = frm `prove` proof
-
 -- | transform the 'Form' result using a monadic 'Either' function.
 transformEitherM
   :: (Monad m)
   => Form m input error view a
   -> (a -> m (Either error b))
   -> Form m input error view b
-transformEitherM frm func = frm `transform` (Proof func)
+transformEitherM frm func = frm `prove` (Proof func)
 
 -- | transform the 'Form' result using an 'Either' function.
 transformEither
