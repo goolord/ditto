@@ -264,7 +264,6 @@ inputMulti i' choices fromInput mkView isSelected =
     augmentChoices choices' = mapM augmentChoice choices'
     augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m input (Choice lbl a)
     augmentChoice (a, lbl, selected) = do
-      incrementFormRange
       i <- i'
       pure $ Choice i lbl selected a
 
@@ -352,7 +351,6 @@ inputChoice i' isDefault choices fromInput mkView =
     augmentChoices choices' = mapM augmentChoice choices'
     augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m input (Choice lbl a)
     augmentChoice (a, lbl, selected) = do
-      incrementFormRange
       i <- i'
       pure $ Choice i lbl selected a
 
