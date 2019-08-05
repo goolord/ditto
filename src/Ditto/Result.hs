@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- | Module for the core result type, and related functions
 --
@@ -15,12 +16,14 @@ module Ditto.Result
   , isSubRange
   , retainErrors
   , retainChildErrors
+  , formIdentifier
   )
 where
 
-import Data.List (intercalate, foldl')
 import Control.Applicative (Applicative (..))
+import Data.List (intercalate, foldl')
 import Data.List.NonEmpty (NonEmpty(..))
+import Torsor
 import qualified Data.List.NonEmpty as NE
 
 -- | Type for failing computations
@@ -56,6 +59,11 @@ data FormId
       Int -- ^ Index of the input
   deriving (Eq, Ord)
 
+instance Torsor FormId Int where
+  add i (FormId p (x :| xs)) = FormId p $ (x + i) :| xs
+  add i (FormIdCustom n x) = FormIdCustom n $ x + i 
+  difference a b = formIdentifier a - formIdentifier b
+
 -- | The zero ID, i.e. the first ID that is usable
 zeroId :: String -> FormId
 zeroId prefix = FormId prefix (pure 0)
@@ -74,9 +82,9 @@ reverseMap :: Foldable t => (a -> b) -> t a -> [b]
 reverseMap f = foldl' (\as a -> f a : as ) []
 
 -- | get the head 'Int' from a 'FormId'
-formId :: FormId -> Int
-formId (FormId _ (x :| _)) = x
-formId (FormIdCustom _ x) = x
+formIdentifier :: FormId -> Int
+formIdentifier (FormId _ (x :| _)) = x
+formIdentifier (FormIdCustom _ x) = x
 
 -- | A range of ID's to specify a group of forms
 data FormRange
@@ -97,7 +105,9 @@ isInRange
   :: FormId -- ^ Id to check for
   -> FormRange -- ^ Range
   -> Bool -- ^ If the range contains the id
-isInRange a (FormRange b c) = formId a >= formId b && formId a < formId c
+isInRange a (FormRange b c) = 
+     formIdentifier a >= formIdentifier b 
+  && formIdentifier a < formIdentifier c
 
 -- | Check if a 'FormRange' is contained in another 'FormRange'
 isSubRange
@@ -105,9 +115,8 @@ isSubRange
   -> FormRange -- ^ Larger range
   -> Bool -- ^ If the sub-range is contained in the larger range
 isSubRange (FormRange a b) (FormRange c d) =
-  formId a >= formId c &&
-    formId b <=
-    formId d
+     formIdentifier a >= formIdentifier c 
+  && formIdentifier b <= formIdentifier d
 
 -- | Select the errors for a certain range
 retainErrors :: FormRange -> [(FormRange, e)] -> [e]

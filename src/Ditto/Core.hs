@@ -14,10 +14,10 @@ import Control.Monad.Reader (MonadReader (ask), ReaderT, runReaderT)
 import Control.Monad.State (MonadState (get, put), StateT, evalStateT)
 import Control.Monad.Trans (lift)
 import Data.Bifunctor (Bifunctor (..))
-import Data.List.NonEmpty (NonEmpty(..))
 import Data.Monoid (Monoid (mappend, mempty))
 import Data.Text.Lazy (Text, unpack)
-import Ditto.Result (FormId (..), FormRange (..), Result (..), unitRange, zeroId)
+import Ditto.Result (FormId(..), FormRange(..), Result(..), unitRange, zeroId, formIdentifier)
+import Torsor (add)
 
 ------------------------------------------------------------------------------
 -- * Proved
@@ -52,6 +52,7 @@ data Value a
   = Default
   | Missing
   | Found a
+  deriving (Eq, Show)
 
 -- | Utility function: Get the current input
 --
@@ -115,15 +116,13 @@ getFormId = do
 getNamedFormId :: Monad m => String -> FormState m i FormId
 getNamedFormId name = do
   FormRange x _ <- get
-  pure $ case x of
-    FormIdCustom _ i -> FormIdCustom name i
-    FormId _ (i :| _) -> FormIdCustom name i
+  pure $ FormIdCustom name $ formIdentifier x
 
 -- | Utility function: increment the current 'FormId'.
-incFormId :: Monad m => FormState m i ()
-incFormId = do
-  FormRange _ endF1 <- get
-  put $ unitRange endF1
+incrementFormRange :: Monad m => FormState m i ()
+incrementFormRange = do
+  FormRange startF1 endF1 <- get
+  put $ FormRange startF1 (add 1 endF1)
 
 -- | A view represents a visual representation of a form. It is composed of a
 -- function which takes a list of all errors and then produces a new view
@@ -189,7 +188,7 @@ instance (Functor m, Monoid view, Monad m) => Applicative (Form m input err view
       ((view1, mfok), (view2, maok)) <-
         bracketState $ do
           res1 <- frmF
-          incFormId
+          incrementFormRange
           res2 <- frmA
           pure (res1, res2)
       fok <- lift $ lift $ mfok

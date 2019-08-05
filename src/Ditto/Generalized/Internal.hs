@@ -264,7 +264,7 @@ inputMulti i' choices fromInput mkView isSelected =
     augmentChoices choices' = mapM augmentChoice choices'
     augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m input (Choice lbl a)
     augmentChoice (a, lbl, selected) = do
-      incFormId
+      incrementFormRange
       i <- i'
       pure $ Choice i lbl selected a
 
@@ -352,7 +352,7 @@ inputChoice i' isDefault choices fromInput mkView =
     augmentChoices choices' = mapM augmentChoice choices'
     augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m input (Choice lbl a)
     augmentChoice (a, lbl, selected) = do
-      incFormId
+      incrementFormRange
       i <- i'
       pure $ Choice i lbl selected a
 
@@ -392,7 +392,7 @@ inputChoiceForms i' def choices mkView =
           (choices'', mres) <-
             foldM
               ( \(views, res) (fid, val, iview, frm, lbl, selected) -> do
-                incFormId
+                incrementFormRange
                 if selected
                 then do
                     (v0, mres) <- unForm frm
@@ -430,21 +430,19 @@ inputChoiceForms i' def choices mkView =
     markSelected en choices' =
       map (\(i, (f, lbl)) -> (f, lbl, either (const False) (==i) en)) choices'
     viewSubForm :: (FormId, Int, FormId, Form m input err view a, lbl, Bool) -> FormState m input (FormId, Int, FormId, view, lbl, Bool)
-    viewSubForm (fid, vl, iview, frm, lbl, selected) =
-      do
-        incFormId
-        (v, _) <- unForm frm
-        pure (fid, vl, iview, unView v [], lbl, selected)
+    viewSubForm (fid, vl, iview, frm, lbl, selected) = do
+      incrementFormRange
+      (v, _) <- unForm frm
+      pure (fid, vl, iview, unView v [], lbl, selected)
     augmentChoices :: (Monad m) => [(Form m input err view a, lbl, Bool)] -> FormState m input [(FormId, Int, FormId, Form m input err view a, lbl, Bool)]
     augmentChoices choices' = mapM augmentChoice (zip [0..] choices')
     augmentChoice :: (Monad m) => (Int, (Form m input err view a, lbl, Bool)) -> FormState m input (FormId, Int, FormId, Form m input err view a, lbl, Bool)
-    augmentChoice (vl, (frm, lbl, selected)) =
-      do
-        incFormId
-        i <- i'
-        incFormId
-        iview <- getFormId
-        pure (i, vl, iview, frm, lbl, selected)
+    augmentChoice (vl, (frm, lbl, selected)) = do
+      incrementFormRange
+      i <- i'
+      incrementFormRange
+      iview <- getFormId
+      pure (i, vl, iview, frm, lbl, selected)
 
 -- | used to create @\<label\>@ elements
 label
@@ -512,11 +510,19 @@ withErrors f form = Form $ do
   (View v, r) <- unForm form
   range <- getFormRange
   pure
-    ( View
-        (\x ->
-          let errs = retainChildErrors range x
-          in f (v x) errs
-        )
+    ( View $ \x ->
+        let errs = retainChildErrors range x
+        in f (v x) errs
     , r
     )
 
+-- (++>)
+  -- :: (Monad m, Semigroup view)
+  -- => Form m input err view z
+  -- -> Form m input err view a
+  -- -> Form m input err view a
+-- f1 ++> f2 = Form $ do
+  -- -- Evaluate the form that matters first, so we have a correct range set
+  -- (v2, r) <- unForm f2
+  -- (v1, _) <- unForm f1
+  -- pure (v1 <> v2, r)
