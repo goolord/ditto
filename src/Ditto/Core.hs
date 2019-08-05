@@ -17,7 +17,6 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Monoid (Monoid (mappend, mempty))
 import Data.Text.Lazy (Text, unpack)
 import Ditto.Result (FormId(..), FormRange(..), Result(..), unitRange, zeroId, formIdentifier)
-import Torsor (add)
 
 ------------------------------------------------------------------------------
 -- * Proved
@@ -121,8 +120,8 @@ getNamedFormId name = do
 -- | Utility function: increment the current 'FormId'.
 incrementFormRange :: Monad m => FormState m i ()
 incrementFormRange = do
-  FormRange startF1 endF1 <- get
-  put $ FormRange startF1 (add 1 endF1)
+  FormRange _ endF1 <- get
+  put $ unitRange endF1
 
 -- | A view represents a visual representation of a form. It is composed of a
 -- function which takes a list of all errors and then produces a new view

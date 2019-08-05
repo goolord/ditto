@@ -93,8 +93,7 @@ data FormRange
 
 -- | Increment a form ID
 incrementFormId :: FormId -> FormId
-incrementFormId (FormId p (x :| xs)) = FormId p $ (x + 1) :| xs
-incrementFormId (FormIdCustom n x) = FormIdCustom n (x + 1)
+incrementFormId fid = add 1 fid
 
 -- | create a 'FormRange' from a 'FormId'
 unitRange :: FormId -> FormRange
