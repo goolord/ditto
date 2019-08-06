@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 -- | Module for the core result type, and related functions
@@ -30,7 +32,7 @@ import qualified Data.List.NonEmpty as NE
 data Result e ok
   = Error [(FormRange, e)]
   | Ok ok
-  deriving (Show, Eq, Functor)
+  deriving (Show, Eq, Functor, Foldable, Traversable)
 
 instance Monad (Result e) where
   return = Ok
@@ -43,6 +45,15 @@ instance Applicative (Result e) where
   Error x <*> Ok _ = Error x
   Ok _ <*> Error y = Error y
   Ok x <*> Ok y = Ok $ x y
+
+instance Semigroup ok => Semigroup (Result e ok) where
+  Error x <> Error y = Error $ x ++ y
+  Ok _ <> Error y = Error y
+  Error x <> _ = Error x
+  Ok a <> Ok b = Ok $ a <> b
+
+instance Semigroup ok => Monoid (Result e ok) where
+  mempty = Error []
 
 -- | convert a 'Result' to 'Maybe' discarding the error message on 'Error'
 getResult :: Result e ok -> Maybe ok
@@ -90,6 +101,9 @@ formIdentifier (FormIdCustom _ x) = x
 data FormRange
   = FormRange FormId FormId
   deriving (Eq, Show)
+
+instance Semigroup FormRange where
+  (FormRange start _) <> (FormRange _ end) = FormRange start end
 
 -- | Increment a form ID
 incrementFormId :: FormId -> FormId

@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LambdaCase #-}
@@ -25,7 +27,11 @@ data Proved a = Proved
   { pos :: FormRange
   , unProved :: a
   }
-  deriving (Show, Functor)
+  deriving (Show, Functor, Foldable, Traversable)
+
+instance Applicative Proved where
+  Proved range0 f <*> Proved range1 a = Proved (range0 <> range1) (f a)
+  pure x = Proved (FormRange (FormIdCustom "" 0) (FormIdCustom "" 0)) x
 
 -- | Utility Function: trivially prove nothing about ()
 unitProved :: FormId -> Proved ()
@@ -59,11 +65,11 @@ getFormInput = getFormId >>= getFormInput'
 -- | Utility function: Gets the input of an arbitrary 'FormId'.
 --
 getFormInput' :: Monad m => FormId -> FormState m input (Value input)
-getFormInput' id' = do
+getFormInput' fid = do
   env <- ask
   case env of
     NoEnvironment -> pure Default
-    Environment f -> lift $ lift $ f id'
+    Environment f -> lift $ lift $ f fid
 
 -- | Utility function: Get the current range
 --
@@ -157,7 +163,7 @@ newtype View err v
 -- @digestive-functors <= 0.2@. If @proof@ is @()@, then 'Form' is an
 -- applicative functor and can be used almost exactly like
 -- @digestive-functors <= 0.2@.
-newtype Form m input err view a = Form {unForm :: FormState m input (View err view, m (Result err (Proved a)))}
+data Form m input err view a = Form { unForm :: FormState m input (View err view, m (Result err (Proved a))) }
   deriving (Functor)
 
 bracketState :: Monad m => FormState m input a -> FormState m input a
