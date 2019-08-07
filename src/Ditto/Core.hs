@@ -398,3 +398,16 @@ mkOk i view' val =
           }
         )
     )
+
+catchFormError :: Monad m
+  => Form m input err view a
+  -> ([err] -> a)
+  -> Form m input err view a
+catchFormError form ferr = Form $ do
+  i <- getFormId
+  (View viewf, mres0) <- unForm form
+  res0 <- lift $ lift mres0
+  case res0 of
+    Ok _ -> unForm form
+    Error err -> mkOk i (viewf []) (ferr $ fmap snd err)
+
