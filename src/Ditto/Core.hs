@@ -154,16 +154,13 @@ newtype View err v
 --
 --   [@view@] The type of data being generated for the view (HSP, Blaze Html, Heist, etc)
 --
---   [@proof@] A type which names what has been proved about the pure value. @()@ means nothing has been proved.
---
 --   [@a@] Value pure by form when it is successfully decoded, validated, etc.
 --
 --
 -- This type is very similar to the 'Form' type from
--- @digestive-functors <= 0.2@. If @proof@ is @()@, then 'Form' is an
--- applicative functor and can be used almost exactly like
 -- @digestive-functors <= 0.2@.
-data Form m input err view a = Form { unForm :: FormState m input (View err view, m (Result err (Proved a))) }
+newtype Form m input err view a = Form 
+  { unForm :: FormState m input (View err view, m (Result err (Proved a))) }
   deriving (Functor)
 
 bracketState :: Monad m => FormState m input a -> FormState m input a

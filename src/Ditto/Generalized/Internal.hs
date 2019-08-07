@@ -10,15 +10,15 @@ module Ditto.Generalized.Internal where
 
 import Control.Monad (foldM)
 import Control.Monad.Trans (lift)
-import Data.Traversable (for)
+-- import Data.Traversable (for)
 import Data.Bifunctor
-import Data.Function ((&))
+-- import Data.Function ((&))
 import Numeric (readDec)
 import Ditto.Backend
 import Ditto.Core
 import Ditto.Result
 import Data.List (elem)
-import Data.Text (Text)
+-- import Data.Text (Text)
 
 -- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.
 input
@@ -292,17 +292,15 @@ inputChoice i' isDefault choices fromInput mkView =
     i <- i'
     inp <- getFormInput' i
     case inp of
-      Default ->
-        do
-          let (choices', def) = markSelected choices
-          view' <- mkView i <$> augmentChoices choices'
-          mkOk' i view' def
-      Missing ->
+      Default -> do
+        let (choices', def) = markSelected choices
+        view' <- mkView i <$> augmentChoices choices'
+        mkOk' i view' def
+      Missing -> do
         -- can happen if no choices where checked
-        do
-          let (choices', def) = markSelected choices
-          view' <- mkView i <$> augmentChoices choices'
-          mkOk' i view' def
+        let (choices', def) = markSelected choices
+        view' <- mkView i <$> augmentChoices choices'
+        mkOk' i view' def
       Found v -> do
         case fromInput v of
           Left err -> do
@@ -333,7 +331,7 @@ inputChoice i' isDefault choices fromInput mkView =
                   ( View $ const view'
                   , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
                   )
-              (Just val) -> mkOk i view' val
+              Just val -> mkOk i view' val
   where
     mkOk' i view' (Just val) = mkOk i view' val
     mkOk' i view' Nothing =
@@ -518,54 +516,3 @@ withErrors f form = Form $ do
     , r
     )
 
--- | this is a stupid hack, eventually this should just be designed around
-inputList
-  :: forall m input err a view. (Monad m, FormError input err, FormInput input)
-  => FormState m input FormId
-  -> (Text -> Either err a)
-  -> (FormId -> a -> view)
-  -> ([view] -> view)
-  -> [a]
-  -> a
-  -> Form m input err view [a]
-inputList i' fromInput toView viewCat initialValues defInitialValue = Form $ do 
-  i <- i'
-  minput <- getFormInput' i
-  case minput of
-    Default ->
-      pure
-        ( View $ const $ viewCat $ toView i <$> initialValues
-        , pure $
-          Ok
-            ( Proved
-              { pos = unitRange i
-              , unProved = initialValues
-              }
-            )
-        )
-    Found inp -> do 
-      results :: [(View err view, Result err (Proved a))] <- for (zipLength (getInputTexts inp) initialValues defInitialValue) $ \(x, iv) -> case fromInput x of
-        Right a -> pure
-          ( View $ const $ toView i a
-          , Ok
-              ( Proved
-                { pos = unitRange i
-                , unProved = a
-                }
-              )
-          )
-        Left err -> pure
-          ( View $ const $ toView i iv
-          , Error [(unitRange i, err)]
-          )
-      pure $ bimap viewCat' (pure . fmap sequenceA . sequenceA) $ unzip results
-    Missing -> pure
-      ( View $ const $ viewCat $ toView i <$> initialValues
-      , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
-      )
-  where
-  viewCat' :: [View err view] -> View err view
-  viewCat' views = View $ \errs -> viewCat (fmap ((&) errs . unView) views)
-  zipLength [] _ _ = []
-  zipLength (x:xs) [] a = (x,a) : zipLength xs [] a
-  zipLength (x:xs) (y:ys) a = (x,y) : zipLength xs ys a
