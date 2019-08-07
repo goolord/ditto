@@ -400,10 +400,10 @@ mkOk i view' val =
     )
 
 catchFormError :: Monad m
-  => Form m input err view a
-  -> ([err] -> a)
+  => ([err] -> a)
   -> Form m input err view a
-catchFormError form ferr = Form $ do
+  -> Form m input err view a
+catchFormError ferr form = Form $ do
   i <- getFormId
   (View viewf, mres0) <- unForm form
   res0 <- lift $ lift mres0
