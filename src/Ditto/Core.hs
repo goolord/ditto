@@ -230,13 +230,13 @@ formEither Form{formDecodeInput, formInitialValue, formFormlet} = Form
   (Right formInitialValue) 
   ( do
     range <- get
-    (view, mres) <- formFormlet
+    (view', mres) <- formFormlet
     res' <- lift $ lift mres
     let res = case res' of
           Error err -> Left (map snd err)
           Ok (Proved _ x) -> Right x
     pure  
-      ( view
+      ( view'
       , pure $ Ok $ Proved 
           { pos = range
           , unProved = res
@@ -264,3 +264,13 @@ retainErrors range = map snd . filter ((== range) . fst)
 -- this form
 retainChildErrors :: FormRange -> [(FormRange, e)] -> [e]
 retainChildErrors range = map snd . filter ((`isSubRange` range) . fst)
+
+view :: Monad m => view -> Form m input err view ()
+view html = Form (successDecode ()) () $ do
+  i <- getFormId
+  pure  ( View (const html)
+        , pure $ Ok $ Proved
+            { pos = FormRange i i
+            , unProved = ()
+            }
+        )
