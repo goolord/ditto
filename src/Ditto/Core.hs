@@ -5,6 +5,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- | This module defines the 'Form' type, its instances, core manipulation functions, and a bunch of helper utilities.
 module Ditto.Core where
@@ -12,6 +14,7 @@ module Ditto.Core where
 import Control.Applicative (Applicative(..), Alternative(..))
 import Control.Monad.Reader (MonadReader (ask), ReaderT, runReaderT)
 import Control.Monad.State (MonadState (get, put), StateT, evalStateT)
+import Control.Monad.Except
 import Control.Monad.Trans (lift)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Monoid (Monoid (mappend, mempty))
@@ -243,6 +246,17 @@ instance (Monad m, Monoid view) => Monad (MForm m input err view) where
           , mfok1
           )
       Error errs -> pure (view0, pure $ Error errs) 
+
+instance (Monad m, Monoid view) => MonadError [err] (MForm m input err view) where
+  throwError es = MForm $ Form $ do
+    range <- getFormRange
+    pure (mempty, pure $ Error $ fmap ((,) range) es)
+  catchError (MForm form) e = MForm $ Form $ do
+  (_, mres0) <- unForm form
+  res0 <- lift $ lift mres0
+  case res0 of
+    Ok _ -> unForm form
+    Error err -> unForm $ getMForm $ e $ map snd err
 
 runMForm
   :: (Monad m)
