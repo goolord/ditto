@@ -83,7 +83,11 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
             )
 
 instance (Monad m, Monoid view) => Monad (Form m input err view) where
-  form@(Form{formInitialValue}) >>= f = form *> f formInitialValue
+  form@(Form{formInitialValue}) >>= f = form *> do 
+    e <- formEither form
+    case e of
+      Left {} -> f formInitialValue
+      Right x -> f x
 
 instance (Monad m, Monoid view, Semigroup a) => Semigroup (Form m input err view a) where
   (<>) = liftA2 (<>)
