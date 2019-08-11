@@ -11,7 +11,9 @@
 
 module Ditto.Generalized.Internal where
 
+import Control.Monad.Except
 import Control.Monad.State.Class (get)
+import Data.List (find)
 import Data.Traversable (for)
 import Ditto.Backend
 import Ditto.Core
@@ -290,7 +292,7 @@ data Choice lbl a = Choice
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
-  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a)
+  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a, Monoid view)
   => FormState m input FormId
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
@@ -298,50 +300,52 @@ inputChoice
   -> (FormId -> [Choice lbl a] -> view) -- ^ function which generates the view
   -> Form m input err view a
 inputChoice i' isDefault choices fromInput mkView =
-  Form (pure . fromInput) undefined $ do
-    i <- i'
-    inp <- getFormInput' i
-    case inp of
-      Default -> do
-        let (choices', def) = markSelected choices
-        view' <- mkView i <$> augmentChoices choices'
-        mkOk' i view' def
-      Missing -> do
-        -- can happen if no choices where checked
-        let (choices', def) = markSelected choices
-        view' <- mkView i <$> augmentChoices choices'
-        mkOk' i view' def
-      Found v -> do
-        case fromInput v of
-          Left err -> do
-            let choices' =
-                  foldr
-                    ( \(a, lbl) c -> (a, lbl, False) : c )
-                    []
-                    choices
-            view' <- mkView i <$> augmentChoices choices'
-            pure
-              ( View $ const view'
-              , pure $ Error [(unitRange i, err)]
-              )
-          Right key -> do
-            let (choices', mval) =
-                  foldr
-                    ( \(a, lbl) (c, v0) ->
-                      if key == a
-                      then ((a, lbl, True) : c, Just a)
-                      else ((a, lbl, False) : c, v0)
+  case find isDefault (map fst choices) of
+    Nothing -> throwError [commonFormError (MissingDefaultValue :: CommonFormError input) :: err]
+    Just defChoice -> Form (pure . fromInput) defChoice $ do
+      i <- i'
+      inp <- getFormInput' i
+      case inp of
+        Default -> do
+          let (choices', def) = markSelected choices
+          view' <- mkView i <$> augmentChoices choices'
+          mkOk' i view' def
+        Missing -> do
+          -- can happen if no choices where checked
+          let (choices', def) = markSelected choices
+          view' <- mkView i <$> augmentChoices choices'
+          mkOk' i view' def
+        Found v -> do
+          case fromInput v of
+            Left err -> do
+              let choices' =
+                    foldr
+                      ( \(a, lbl) c -> (a, lbl, False) : c )
+                      []
+                      choices
+              view' <- mkView i <$> augmentChoices choices'
+              pure
+                ( View $ const view'
+                , pure $ Error [(unitRange i, err)]
+                )
+            Right key -> do
+              let (choices', mval) =
+                    foldr
+                      ( \(a, lbl) (c, v0) ->
+                        if key == a
+                        then ((a, lbl, True) : c, Just a)
+                        else ((a, lbl, False) : c, v0)
+                      )
+                      ([], Nothing) $
+                      choices
+              view' <- mkView i <$> augmentChoices choices'
+              case mval of
+                Nothing ->
+                  pure
+                    ( View $ const view'
+                    , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
                     )
-                    ([], Nothing) $
-                    choices
-            view' <- mkView i <$> augmentChoices choices'
-            case mval of
-              Nothing ->
-                pure
-                  ( View $ const view'
-                  , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
-                  )
-              Just val -> mkOk i view' val
+                Just val -> mkOk i view' val
   where
     mkOk' i view' (Just val) = mkOk i view' val
     mkOk' i view' Nothing =
