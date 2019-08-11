@@ -12,6 +12,9 @@ module Ditto.Types where
 import Torsor
 import Data.Text (Text)
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Foldable (foldl')
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
 
 -- | An ID used to identify forms
 data FormId
@@ -23,6 +26,13 @@ data FormId
     Int  -- ^ Index of the input
   deriving (Eq, Ord, Show)
 
+encodeFormId :: FormId -> Text
+encodeFormId (FormId p xs) =
+  p <> "-fval-" <> (T.intercalate "." $ reverseMap (T.pack . show) $ NE.toList xs)
+  where
+  reverseMap :: Foldable t => (a -> b) -> t a -> [b]
+  reverseMap f = foldl' (\as a -> f a : as ) []
+encodeFormId (FormIdCustom x _) = x
 
 -- | get the head 'Int' from a 'FormId'
 formIdentifier :: FormId -> Int
