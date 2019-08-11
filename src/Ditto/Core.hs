@@ -32,7 +32,7 @@ instance (Monad m, Semigroup input) => Semigroup (Environment m input) where
   (Environment f) <> (Environment g) = Environment $ \input -> do
     x <- f input
     y <- g input
-    pure $ x <> y
+    pure (x <> y)
 
 instance (Monad m, Semigroup input) => Monoid (Environment m input) where
   mempty = NoEnvironment
@@ -49,12 +49,12 @@ data Form m input err view a = Form
 instance (Monad m, Monoid view) => Applicative (Form m input err view) where
   pure x = Form (successDecode x) x $ do
     i <- getFormId
-    pure ( mempty
+    pure  ( mempty
           , pure $ Ok $ Proved
               { pos = FormRange i i
               , unProved = x
               }
-         )
+          )
   (Form df ivF frmF) <*> (Form da ivA frmA) =
     Form (\inp -> do 
         f <- df inp
@@ -197,7 +197,7 @@ runForm env prefix form =
     (runReaderT (formFormlet form) env) 
     (unitRange (FormId prefix (pure 0)))
 
--- | infix mapView: succinct `foo @$ do ..`
+-- | infix mapView: succinctly mix the @view@ dsl and the formlets dsl  @foo @$ do ..@
 infixr 0 @$
 (@$) :: Monad m => (view -> view) -> Form m input err view a -> Form m input err view a
 (@$) = mapView
@@ -210,12 +210,12 @@ mkOk
   -> a
   -> FormState m input (View err view, m (Result err (Proved a)))
 mkOk i view' val = pure
-    ( View $ const $ view'
-    , pure $ Ok ( Proved
-        { pos = unitRange i
-        , unProved = val
-        } )
-    )
+  ( View $ const $ view'
+  , pure $ Ok ( Proved
+      { pos = unitRange i
+      , unProved = val
+      } )
+  )
 
 formEither :: Monad m
   => Form m input err view a 
@@ -245,15 +245,22 @@ formEither Form{formDecodeInput, formInitialValue, formFormlet} = Form
   )
 
 -- | Utility function: Get the current input
---
 getFormInput :: Monad m => FormState m input (Value input)
 getFormInput = getFormId >>= getFormInput'
 
 -- | Utility function: Gets the input of an arbitrary 'FormId'.
---
 getFormInput' :: Monad m => FormId -> FormState m input (Value input)
 getFormInput' fid = do
   env <- ask
   case env of
     NoEnvironment -> pure Default
     Environment f -> lift $ lift $ f fid
+
+-- | Select the errors for a certain range
+retainErrors :: FormRange -> [(FormRange, e)] -> [e]
+retainErrors range = map snd . filter ((== range) . fst)
+
+-- | Select the errors originating from this form or from any of the children of
+-- this form
+retainChildErrors :: FormRange -> [(FormRange, e)] -> [e]
+retainChildErrors range = map snd . filter ((`isSubRange` range) . fst)

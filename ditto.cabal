@@ -28,6 +28,8 @@ library
     Ditto.Types
     Ditto.Backend
     Ditto.Proof
+    Ditto.Generalized.Named
+    Ditto.Generalized.Unnamed
   other-modules:
     Ditto.Generalized.Internal
   build-depends:       
