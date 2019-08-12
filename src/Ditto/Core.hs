@@ -90,9 +90,14 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
               }
             )
 
-instance (Environment m input, Monoid view) => Monad (Form m input err view) where
+newtype Phantom a b = Phantom { getPhantom :: b }
+
+missingDefaultValue :: forall input err. FormError input err => Phantom input err
+missingDefaultValue = Phantom $ commonFormError (MissingDefaultValue :: CommonFormError input)
+
+instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
   form@(Form{formInitialValue, formFormlet}) >>= f = form *> do
-    join $ Form (error "decode") (error errorInitialValue) $ do 
+    join $ Form (const (pure $ Left $ getPhantom (missingDefaultValue :: Phantom input err))) (error errorInitialValue) $ do 
       (_, mres) <- formFormlet
       res <- lift mres
       range <- get
