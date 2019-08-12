@@ -9,6 +9,7 @@
   , StandaloneDeriving
   , FunctionalDependencies
   , OverloadedStrings
+  , RankNTypes
 #-}
 
 module Ditto.Core where
@@ -290,4 +291,15 @@ view html = Form (successDecode ()) (pure ()) $ do
             , unProved = ()
             }
         )
+
+mapFormMonad :: Monad f => (forall x. m x -> f x) -> Form m input err view a -> Form f input err view a
+mapFormMonad f Form{formDecodeInput, formInitialValue, formFormlet} = Form 
+  { formDecodeInput = f . formDecodeInput
+  , formInitialValue = f formInitialValue
+  , formFormlet = do
+      (view', mres) <- fstate formFormlet
+      pure $ (view', f mres)
+  }
+  where
+  fstate st = StateT $ f . runStateT st
 
