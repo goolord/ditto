@@ -57,7 +57,7 @@ prove (Form{formDecodeInput, formInitialValue, formFormlet}) (Proof f ivB) = For
   (ivB formInitialValue)
   ( do
     (html, a) <- formFormlet
-    a' <- lift $ lift a
+    a' <- lift a
     pure
       ( html
       , do

@@ -21,8 +21,8 @@ import Ditto.Types
 
 -- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.
 input
-  :: forall m input err a view. (Monad m, FormError input err)
-  => FormState m input FormId
+  :: forall m input err a view. (Environment m input, FormError input err)
+  => FormState m FormId
   -> (input -> Either err a)
   -> (FormId -> a -> view)
   -> a
@@ -63,8 +63,8 @@ input formSId fromInput toView initialValue =
 
 -- | this is necessary in order to basically map over the decoding function
 inputList
-  :: forall m input err a view. (Monad m, FormError input err)
-  => FormState m input FormId
+  :: forall m input err a view. (Monad m, FormError input err, Environment m input)
+  => FormState m FormId
   -> (input -> Either err [a])
   -> ([view] -> view)
   -> a
@@ -123,8 +123,8 @@ inputList formSId fromInput viewCat failVal initialValue createForm =
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
 inputMaybe
-  :: (Monad m, FormError input err)
-  => FormState m input FormId
+  :: (Monad m, FormError input err, Environment m input)
+  => FormState m FormId
   -> (input -> Either err a)
   -> (FormId -> Maybe a -> view)
   -> Maybe a
@@ -173,7 +173,7 @@ inputMaybe i' fromInput toView initialValue =
 -- | used for elements like @\<input type=\"reset\"\>@ which take a value, but are never present in the form data set.
 inputNoData
   :: (Monad m)
-  => FormState m input FormId
+  => FormState m FormId
   -> (FormId -> view)
   -> Form m input err view ()
 inputNoData i' toView =
@@ -192,8 +192,8 @@ inputNoData i' toView =
 
 -- | used for @\<input type=\"file\"\>@
 inputFile
-  :: forall m input err view. (Monad m, FormInput input, FormError input err)
-  => FormState m input FormId
+  :: forall m input err view. (Monad m, FormInput input, FormError input err, Environment m input)
+  => FormState m FormId
   -> (FormId -> view)
   -> Form m input err view (FileType input)
 inputFile i' toView =
@@ -233,8 +233,8 @@ inputFile i' toView =
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
 inputMulti
-  :: forall m input err view a lbl. (FormError input err, FormInput input, Monad m, Eq a)
-  => FormState m input FormId
+  :: forall m input err view a lbl. (FormError input err, FormInput input, Environment m input, Eq a)
+  => FormState m FormId
   -> [(a, lbl)] -- ^ value, label, initially checked
   -> (input -> Either err [a])
   -> (FormId -> [Choice lbl a] -> view) -- ^ function which generates the view
@@ -276,9 +276,9 @@ inputMulti i' choices fromInput mkView isSelected =
         view' <- mkView i <$> augmentChoices choices'
         mkOk i view' vals
   where
-    augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m input [Choice lbl a]
+    augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m [Choice lbl a]
     augmentChoices choices' = mapM augmentChoice choices'
-    augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m input (Choice lbl a)
+    augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m (Choice lbl a)
     augmentChoice (a, lbl, selected) = do
       i <- i'
       pure $ Choice i lbl selected a
@@ -292,8 +292,8 @@ data Choice lbl a = Choice
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
-  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a, Monoid view)
-  => FormState m input FormId
+  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a, Monoid view, Environment m input)
+  => FormState m FormId
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
   -> (input -> Either err a)
@@ -363,9 +363,9 @@ inputChoice i' isDefault choices fromInput mkView =
         )
         ([], Nothing)
         cs
-    augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m input [Choice lbl a]
+    augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m [Choice lbl a]
     augmentChoices choices' = mapM augmentChoice choices'
-    augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m input (Choice lbl a)
+    augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m (Choice lbl a)
     augmentChoice (a, lbl, selected) = do
       i <- i'
       pure $ Choice i lbl selected a
@@ -373,7 +373,7 @@ inputChoice i' isDefault choices fromInput mkView =
 -- | used to create @\<label\>@ elements
 label
   :: Monad m
-  => FormState m input FormId
+  => FormState m FormId
   -> (FormId -> view)
   -> Form m input err view ()
 label i' f = Form (successDecode ()) () $ do
