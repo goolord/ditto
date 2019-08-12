@@ -18,6 +18,7 @@ module Ditto.Generalized.Unnamed
   , withErrors
   ) where
 
+import Data.List.NonEmpty (NonEmpty(..))
 import Ditto.Backend
 import Ditto.Core
 import Ditto.Types
@@ -63,7 +64,7 @@ inputMulti = G.inputMulti getFormId
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice :: forall a m err input lbl view. (FormError input err, FormInput input, Environment m input, Eq a, Monoid view)
   => (a -> Bool) -- ^ is default
-  -> [(a, lbl)] -- ^ value, label
+  -> NonEmpty (a, lbl) -- ^ value, label
   -> (input -> Either err a)
   -> (FormId -> [G.Choice lbl a] -> view) -- ^ function which generates the view
   -> Form m input err view a

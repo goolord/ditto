@@ -11,9 +11,9 @@
 
 module Ditto.Generalized.Internal where
 
-import Control.Monad.Except
 import Control.Monad.State.Class (get)
 import Data.List (find)
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Traversable (for)
 import Ditto.Backend
 import Ditto.Core
@@ -295,13 +295,14 @@ inputChoice
   :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a, Monoid view, Environment m input)
   => FormState m FormId
   -> (a -> Bool) -- ^ is default
-  -> [(a, lbl)] -- ^ value, label
+  -> NonEmpty (a, lbl) -- ^ value, label
   -> (input -> Either err a)
   -> (FormId -> [Choice lbl a] -> view) -- ^ function which generates the view
   -> Form m input err view a
-inputChoice i' isDefault choices fromInput mkView =
-  case find isDefault (map fst choices) of
-    Nothing -> throwError [commonFormError (MissingDefaultValue :: CommonFormError input) :: err]
+inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView =
+  case find isDefault (fmap fst choices) of
+    Nothing -> Form (pure . fromInput) (pure $ fst headChoice) $ do
+      undefined
     Just defChoice -> Form (pure . fromInput) (pure defChoice) $ do
       i <- i'
       inp <- getFormInput' i
@@ -353,7 +354,7 @@ inputChoice i' isDefault choices fromInput mkView =
         ( View $ const $ view'
         , pure $ Error [(unitRange i, commonFormError (MissingDefaultValue :: CommonFormError input) :: err)]
         )
-    markSelected :: [(a, lbl)] -> ([(a, lbl, Bool)], Maybe a)
+    markSelected :: Foldable f => f (a, lbl) -> ([(a, lbl, Bool)], Maybe a)
     markSelected cs =
       foldr
         ( \(a, lbl) (vs, ma) ->

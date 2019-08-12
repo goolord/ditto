@@ -22,6 +22,7 @@ import Ditto.Backend
 import Ditto.Core
 import Ditto.Types
 import Data.Text (Text)
+import Data.List.NonEmpty (NonEmpty(..))
 import qualified Ditto.Generalized.Internal as G
 
 -- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.
@@ -70,7 +71,7 @@ inputMulti name = G.inputMulti (getNamedFormId name)
 inputChoice :: forall a m err input lbl view. (FormError input err, FormInput input, Environment m input, Eq a, Monoid view)
   => Text
   -> (a -> Bool) -- ^ is default
-  -> [(a, lbl)] -- ^ value, label
+  -> NonEmpty (a, lbl) -- ^ value, label
   -> (input -> Either err a)
   -> (FormId -> [G.Choice lbl a] -> view) -- ^ function which generates the view
   -> Form m input err view a

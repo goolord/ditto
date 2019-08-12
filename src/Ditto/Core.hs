@@ -10,13 +10,13 @@
   , FunctionalDependencies
   , OverloadedStrings
   , RankNTypes
+  , FlexibleInstances
 #-}
 
 module Ditto.Core where
 
 import Control.Applicative
 import Control.Monad.Reader
-import Control.Monad.Except
 import Control.Monad.State.Lazy
 import Data.Bifunctor
 import Data.Text (Text)
@@ -26,6 +26,12 @@ import Torsor
 
 class Monad m => Environment m input | m -> input where
   environment :: FormId -> m (Value input)
+
+newtype NoEnvironment input m a = NoEnvironment { getNoEnvironment ::  m a }
+  deriving (Monad, Functor, Applicative)
+
+instance Monad m => Environment (NoEnvironment input m) input where
+  environment = noEnvironment
 
 noEnvironment :: Applicative m => FormId -> m (Value input)
 noEnvironment = const (pure Default)
@@ -139,17 +145,6 @@ failDecode = const (pure $ Left (commonFormError (MissingDefaultValue :: CommonF
 
 successDecode :: Applicative m => a -> (input -> m (Either err a))
 successDecode = const . pure . Right
-
-instance (Environment m input, Monoid view, FormError input err) => MonadError [err] (Form m input err view) where
-  throwError es = Form failDecode (error errorInitialValue) $ do
-    range <- get
-    pure (mempty, pure $ Error $ fmap ((,) range) es)
-  catchError form@(Form{formDecodeInput, formInitialValue}) e = Form formDecodeInput formInitialValue $ do
-    (_, mres0) <- formFormlet form
-    res0 <- lift mres0
-    case res0 of
-      Ok _ -> formFormlet form
-      Error err -> formFormlet $ e $ map snd err
 
 -- | Change the view of a form using a simple function
 --
@@ -315,11 +310,19 @@ catchFormError ferr Form{formDecodeInput, formInitialValue, formFormlet} = Form 
     Ok _ -> formFormlet
     Error err -> mkOk i (viewf []) (ferr $ fmap snd err)
 
+catchFormErrorM :: Monad m => Form m input err view a -> ([err] -> Form m input err view a) -> Form m input err view a
+catchFormErrorM form@(Form{formDecodeInput, formInitialValue}) e = Form formDecodeInput formInitialValue $ do
+  (_, mres0) <- formFormlet form
+  res0 <- lift mres0
+  case res0 of
+    Ok _ -> formFormlet form
+    Error err -> formFormlet $ e $ map snd err
+
 viewForm :: (Monad m)
   => Text -- ^ form prefix
   -> Form m input err view a -- ^ form to view
   -> m view
 viewForm prefix form = do
-  (v, _) <- runForm prefix form
+  (v, _) <- getNoEnvironment $ runForm prefix $ mapFormMonad NoEnvironment form
   pure (unView v [])
 
