@@ -315,3 +315,11 @@ catchFormError ferr Form{formDecodeInput, formInitialValue, formFormlet} = Form 
     Ok _ -> formFormlet
     Error err -> mkOk i (viewf []) (ferr $ fmap snd err)
 
+viewForm :: (Monad m)
+  => Text -- ^ form prefix
+  -> Form m input err view a -- ^ form to view
+  -> m view
+viewForm prefix form = do
+  (v, _) <- runForm prefix form
+  pure (unView v [])
+
