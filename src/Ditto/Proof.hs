@@ -35,7 +35,7 @@ import Numeric (readDec, readFloat, readSigned)
 -- Generally, each 'Proof' has a unique data-type associated with it
 -- which names the proof, such as:
 --
---
+
 data Proof m err a b = Proof
   { proofFunction :: a -> m (Either err b) -- ^ function which provides the proof
   , proofNewInitialValue :: a -> b

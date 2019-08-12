@@ -1,7 +1,9 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE 
+    MultiParamTypeClasses
+  , TypeFamilies
+  , OverloadedStrings
+  , FunctionalDependencies
+#-}
 
 {- |
 This module contains two classes. 'FormInput' is a class which is parameterized over the @input@ type used to represent form data in different web frameworks. There should be one instance for each framework, such as Happstack, Snap, WAI, etc.

@@ -1,7 +1,6 @@
 module Ditto 
   ( module P
-  )
-where
+  ) where
 
 import Ditto.Backend as P
 import Ditto.Core as P
