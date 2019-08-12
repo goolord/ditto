@@ -95,14 +95,35 @@ newtype Phantom a b = Phantom { getPhantom :: b }
 missingDefaultValue :: forall input err. FormError input err => Phantom input err
 missingDefaultValue = Phantom $ commonFormError (MissingDefaultValue :: CommonFormError input)
 
-instance (Environment m input, Traversable m, Monoid view, FormError input err) => Monad (Form m input err view) where
-  form@(Form{formInitialValue}) >>= f = innerJoin $ do
-    iv <- formInitialValue
-    (_, mres) <- runForm "" form
-    res <- mres
-    case res of
-      Error {} -> pure $ f iv
-      Ok (Proved _ x) -> pure $ f x
+instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
+  form >>= f = Form 
+    (\input -> do
+      (_, mres) <- runForm "" form
+      res <- mres
+      case res of
+        Error {} -> do
+          iv <- formInitialValue form
+          formDecodeInput (f iv) input
+        Ok (Proved _ x) -> formDecodeInput (f x) input
+    ) 
+    (do 
+      (_, mres) <- runForm "" form
+      res <- mres
+      case res of
+        Error {} -> do
+          iv <- formInitialValue form
+          formInitialValue $ f iv
+        Ok (Proved _ x) -> formInitialValue (f x)
+    )
+    (do
+      (_, mres) <- lift $ runForm "" form
+      res <- lift mres
+      case res of
+        Error {} -> do 
+          iv <- lift $ formInitialValue form
+          formFormlet $ f iv
+        Ok (Proved _ x) -> formFormlet $ f x
+    )
 
 instance (Monad m, Monoid view, Semigroup a) => Semigroup (Form m input err view a) where
   (<>) = liftA2 (<>)
@@ -134,7 +155,7 @@ failDecode = const (pure $ Left (commonFormError (MissingDefaultValue :: CommonF
 successDecode :: Applicative m => a -> (input -> m (Either err a))
 successDecode = const . pure . Right
 
-instance (Environment m input, Traversable m, Monoid view, FormError input err) => MonadError [err] (Form m input err view) where
+instance (Environment m input, Monoid view, FormError input err) => MonadError [err] (Form m input err view) where
   throwError es = Form failDecode (error errorInitialValue) $ do
     range <- get
     pure (mempty, pure $ Error $ fmap ((,) range) es)
@@ -286,22 +307,22 @@ view html = Form (successDecode ()) (pure ()) $ do
             }
         )
 
-innerJoin :: (Traversable m, Monad m, Monoid view) => m (Form m input err view b) -> Form m input err view b
-innerJoin mform = Form dec (join formInitialValue) $ do
-    (view', mres) <- formFormlet
-    res <- lift mres
-    case res of
-      Ok (Proved pos x) -> do 
-        x' <- lift x
-        pure (view', pure $ Ok $ Proved pos x')
-      Error es -> do
-        pure (view', pure $ Error es)
-  where 
-  (Form{formDecodeInput, formInitialValue, formFormlet}) = sequenceA mform
-  dec inp = do
-    res <- formDecodeInput inp
-    case res of
-      Left x -> pure $ Left x
-      Right mx -> do
-        x <- mx
-        pure $ Right x
+-- innerJoin :: (Monad m, Monoid view) => m (Form m input err view b) -> Form m input err view b
+-- innerJoin mform = Form dec (join formInitialValue) $ do
+--     (view', mres) <- formFormlet
+--     res <- lift mres
+--     case res of
+--       Ok (Proved pos x) -> do 
+--         x' <- lift x
+--         pure (view', pure $ Ok $ Proved pos x')
+--       Error es -> do
+--         pure (view', pure $ Error es)
+--   where 
+--   (Form{formDecodeInput, formInitialValue, formFormlet}) = sequenceA mform
+--   dec inp = do
+--     res <- formDecodeInput inp
+--     case res of
+--       Left x -> pure $ Left x
+--       Right mx -> do
+--         x <- mx
+--         pure $ Right x

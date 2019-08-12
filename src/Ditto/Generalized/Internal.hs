@@ -292,7 +292,7 @@ data Choice lbl a = Choice
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
-  :: forall a m err input lbl view. (FormError input err, Traversable m, FormInput input, Monad m, Eq a, Monoid view, Environment m input)
+  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a, Monoid view, Environment m input)
   => FormState m FormId
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
