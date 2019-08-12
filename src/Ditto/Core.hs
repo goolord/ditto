@@ -23,23 +23,6 @@ import Ditto.Types
 import Ditto.Backend
 import Torsor
 
--- data Environment m input
-  -- = Environment (FormId -> m (Value input))
-  -- | NoEnvironment
-  -- deriving (Functor)
-
--- instance (Monad m, Semigroup input) => Semigroup (Environment m input) where
-  -- NoEnvironment <> x = x
-  -- x <> NoEnvironment = x
-  -- (Environment f) <> (Environment g) = Environment $ \input -> do
-    -- x <- f input
-    -- y <- g input
-    -- pure (x <> y)
-
--- instance (Monad m, Semigroup input) => Monoid (Environment m input) where
-  -- mempty = NoEnvironment
-  -- mappend = (<>)
-
 class Monad m => Environment m input | m -> input where
   environment :: FormId -> m (Value input)
 
@@ -139,16 +122,16 @@ instance Functor m => Bifunctor (Form m input err) where
 errorInitialValue :: String
 errorInitialValue = "ditto: Ditto.Core.errorInitalValue was evaluated"
 
--- instance (Monad m, Monoid view, FormError input err) => Alternative (Form m input err view) where
---   empty = Form 
---     failDecode
---     errorInitialValue
---     (pure (mempty, pure $ Error mempty))
---   formA <|> formB = join $ do
---     efA <- formEither formA
---     case efA of
---       Right{} -> pure formA
---       Left{} -> pure formB
+instance (Monad m, Monoid view, FormError input err, Environment m input) => Alternative (Form m input err view) where
+  empty = Form 
+    failDecode
+    (error errorInitialValue)
+    (pure (mempty, pure $ Error mempty))
+  formA <|> formB = do
+    efA <- formEither formA
+    case efA of
+      Right{} -> formA
+      Left{} -> formB
 
 failDecode :: forall m input err a. (Applicative m, FormError input err) => input -> m (Either err a)
 failDecode = const (pure $ Left (commonFormError (MissingDefaultValue :: CommonFormError input) :: err))
@@ -308,22 +291,3 @@ view html = Form (successDecode ()) (pure ()) $ do
             }
         )
 
--- innerJoin :: (Monad m, Monoid view) => m (Form m input err view b) -> Form m input err view b
--- innerJoin mform = Form dec (join formInitialValue) $ do
---     (view', mres) <- formFormlet
---     res <- lift mres
---     case res of
---       Ok (Proved pos x) -> do 
---         x' <- lift x
---         pure (view', pure $ Ok $ Proved pos x')
---       Error es -> do
---         pure (view', pure $ Error es)
---   where 
---   (Form{formDecodeInput, formInitialValue, formFormlet}) = sequenceA mform
---   dec inp = do
---     res <- formDecodeInput inp
---     case res of
---       Left x -> pure $ Left x
---       Right mx -> do
---         x <- mx
---         pure $ Right x
