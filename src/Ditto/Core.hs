@@ -96,34 +96,35 @@ missingDefaultValue :: forall input err. FormError input err => Phantom input er
 missingDefaultValue = Phantom $ commonFormError (MissingDefaultValue :: CommonFormError input)
 
 instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
-  form >>= f = form *> Form 
-    (\input -> do
-      (_, mres) <- runForm "" form
-      res <- mres
-      case res of
-        Error {} -> do
-          iv <- formInitialValue form
-          formDecodeInput (f iv) input
-        Ok (Proved _ x) -> formDecodeInput (f x) input
-    ) 
-    (do 
-      (_, mres) <- runForm "" form
-      res <- mres
-      case res of
-        Error {} -> do
-          iv <- formInitialValue form
-          formInitialValue $ f iv
-        Ok (Proved _ x) -> formInitialValue (f x)
-    )
-    (do
-      (_, mres) <- lift $ runForm "" form
-      res <- lift mres
-      case res of
-        Error {} -> do 
-          iv <- lift $ formInitialValue form
-          formFormlet $ f iv
-        Ok (Proved _ x) -> formFormlet $ f x
-    )
+  form >>= f = form *> 
+    let mres = do 
+        (~_, mr) <- runForm "" form 
+        mr
+    in Form 
+      (\input -> do
+        res <- mres
+        case res of
+          Error {} -> do
+            iv <- formInitialValue form
+            formDecodeInput (f iv) input
+          Ok (Proved _ x) -> formDecodeInput (f x) input
+      ) 
+      (do 
+        res <- mres
+        case res of
+          Error {} -> do
+            iv <- formInitialValue form
+            formInitialValue $ f iv
+          Ok (Proved _ x) -> formInitialValue (f x)
+      )
+      (do
+        res <- lift mres
+        case res of
+          Error {} -> do 
+            iv <- lift $ formInitialValue form
+            formFormlet $ f iv
+          Ok (Proved _ x) -> formFormlet $ f x
+      )
 
 instance (Monad m, Monoid view, Semigroup a) => Semigroup (Form m input err view a) where
   (<>) = liftA2 (<>)
