@@ -54,7 +54,7 @@ prove (Form{formDecodeInput, formInitialValue, formFormlet}) (Proof f ivB) = For
       Left x -> pure $ Left x
       Right x -> f x
   )
-  (ivB formInitialValue)
+  (fmap ivB formInitialValue)
   ( do
     (html, a) <- formFormlet
     a' <- lift a

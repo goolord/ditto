@@ -28,7 +28,7 @@ input
   -> a
   -> Form m input err view a
 input formSId fromInput toView initialValue =
-  Form (pure . fromInput) initialValue $ do
+  Form (pure . fromInput) (pure initialValue) $ do
     i <- formSId
     v <- getFormInput' i
     case v of
@@ -72,7 +72,7 @@ inputList
   -> (a -> Form m input err view a)
   -> Form m input err view [a]
 inputList formSId fromInput viewCat failVal initialValue createForm =
-  Form (pure . fromInput) initialValue $ do
+  Form (pure . fromInput) (pure initialValue) $ do
     i <- formSId
     v <- getFormInput' i
     case v of
@@ -130,7 +130,7 @@ inputMaybe
   -> Maybe a
   -> Form m input err view (Maybe a)
 inputMaybe i' fromInput toView initialValue =
-  Form (pure . fmap Just . fromInput) initialValue $ do
+  Form (pure . fmap Just . fromInput) (pure initialValue) $ do
     i <- i'
     v <- getFormInput' i
     case v of
@@ -177,7 +177,7 @@ inputNoData
   -> (FormId -> view)
   -> Form m input err view ()
 inputNoData i' toView =
-  Form (successDecode ()) () $ do
+  Form (successDecode ()) (pure ()) $ do
     i <- i'
     pure
       ( View $ const $ toView i
@@ -241,7 +241,7 @@ inputMulti
   -> (a -> Bool) -- ^ isChecked/isSelected initially
   -> Form m input err view [a]
 inputMulti i' choices fromInput mkView isSelected =
-  Form (pure . fromInput) (map fst choices) $ do
+  Form (pure . fromInput) (pure $ map fst choices) $ do
     i <- i'
     inp <- getFormInput' i
     case inp of
@@ -292,7 +292,7 @@ data Choice lbl a = Choice
 
 -- | radio buttons, single @\<select\>@ boxes
 inputChoice
-  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a, Monoid view, Environment m input)
+  :: forall a m err input lbl view. (FormError input err, Traversable m, FormInput input, Monad m, Eq a, Monoid view, Environment m input)
   => FormState m FormId
   -> (a -> Bool) -- ^ is default
   -> [(a, lbl)] -- ^ value, label
@@ -302,7 +302,7 @@ inputChoice
 inputChoice i' isDefault choices fromInput mkView =
   case find isDefault (map fst choices) of
     Nothing -> throwError [commonFormError (MissingDefaultValue :: CommonFormError input) :: err]
-    Just defChoice -> Form (pure . fromInput) defChoice $ do
+    Just defChoice -> Form (pure . fromInput) (pure defChoice) $ do
       i <- i'
       inp <- getFormInput' i
       case inp of
@@ -376,7 +376,7 @@ label
   => FormState m FormId
   -> (FormId -> view)
   -> Form m input err view ()
-label i' f = Form (successDecode ()) () $ do
+label i' f = Form (successDecode ()) (pure ()) $ do
   id' <- i'
   pure
     ( View (const $ f id')
@@ -397,7 +397,7 @@ errors
   :: Monad m
   => ([err] -> view) -- ^ function to convert the err messages into a view
   -> Form m input err view ()
-errors f = Form (successDecode ()) () $ do
+errors f = Form (successDecode ()) (pure ()) $ do
   range <- get
   pure
     ( View (f . retainErrors range)
@@ -414,7 +414,7 @@ childErrors
   :: Monad m
   => ([err] -> view)
   -> Form m input err view ()
-childErrors f = Form (successDecode ()) () $ do
+childErrors f = Form (successDecode ()) (pure ()) $ do
   range <- get
   pure
     ( View (f . retainChildErrors range)

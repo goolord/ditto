@@ -50,12 +50,12 @@ type FormState m = StateT FormRange m
 
 data Form m input err view a = Form 
   { formDecodeInput :: input -> m (Either err a)
-  , formInitialValue :: a
+  , formInitialValue :: m a
   , formFormlet :: FormState m (View err view, m (Result err (Proved a)))
   } deriving (Functor)
 
 instance (Monad m, Monoid view) => Applicative (Form m input err view) where
-  pure x = Form (successDecode x) x $ do
+  pure x = Form (successDecode x) (pure x) $ do
     i <- getFormId
     pure  ( mempty
           , pure $ Ok $ Proved
@@ -68,7 +68,7 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
         f <- df inp
         x <- da inp
         pure (f <*> x)
-      ) (ivF ivA) $ do
+      ) (ivF <*> ivA) $ do
       ((view1, mfok), (view2, maok)) <-
         bracketState $ do
           res1 <- frmF
@@ -95,15 +95,14 @@ newtype Phantom a b = Phantom { getPhantom :: b }
 missingDefaultValue :: forall input err. FormError input err => Phantom input err
 missingDefaultValue = Phantom $ commonFormError (MissingDefaultValue :: CommonFormError input)
 
-instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
-  form@(Form{formInitialValue, formFormlet}) >>= f = form *> do
-    join $ Form (const (pure $ Left $ getPhantom (missingDefaultValue :: Phantom input err))) (error errorInitialValue) $ do 
-      (_, mres) <- formFormlet
-      res <- lift mres
-      range <- get
-      case res of
-        Ok (Proved _ x) -> pure (mempty, pure $ Ok (Proved range (f x)))
-        Error {} -> pure (mempty, pure $ Ok (Proved range (f formInitialValue)))
+instance (Environment m input, Traversable m, Monoid view, FormError input err) => Monad (Form m input err view) where
+  form@(Form{formInitialValue}) >>= f = innerJoin $ do
+    iv <- formInitialValue
+    (_, mres) <- runForm "" form
+    res <- mres
+    case res of
+      Error {} -> pure $ f iv
+      Ok (Proved _ x) -> pure $ f x
 
 instance (Monad m, Monoid view, Semigroup a) => Semigroup (Form m input err view a) where
   (<>) = liftA2 (<>)
@@ -135,7 +134,7 @@ failDecode = const (pure $ Left (commonFormError (MissingDefaultValue :: CommonF
 successDecode :: Applicative m => a -> (input -> m (Either err a))
 successDecode = const . pure . Right
 
-instance (Environment m input, Monoid view, FormError input err) => MonadError [err] (Form m input err view) where
+instance (Environment m input, Traversable m, Monoid view, FormError input err) => MonadError [err] (Form m input err view) where
   throwError es = Form failDecode (error errorInitialValue) $ do
     range <- get
     pure (mempty, pure $ Error $ fmap ((,) range) es)
@@ -243,7 +242,7 @@ formEither Form{formDecodeInput, formInitialValue, formFormlet} = Form
       Left err -> pure $ Right $ Left [err]
       Right x -> pure $ Right $ Right x
   ) 
-  (Right formInitialValue) 
+  (fmap Right formInitialValue) 
   ( do
     range <- get
     (view', mres) <- formFormlet
@@ -278,7 +277,7 @@ retainChildErrors :: FormRange -> [(FormRange, e)] -> [e]
 retainChildErrors range = map snd . filter ((`isSubRange` range) . fst)
 
 view :: Monad m => view -> Form m input err view ()
-view html = Form (successDecode ()) () $ do
+view html = Form (successDecode ()) (pure ()) $ do
   i <- getFormId
   pure  ( View (const html)
         , pure $ Ok $ Proved
@@ -286,3 +285,23 @@ view html = Form (successDecode ()) () $ do
             , unProved = ()
             }
         )
+
+innerJoin :: (Traversable m, Monad m, Monoid view) => m (Form m input err view b) -> Form m input err view b
+innerJoin mform = Form dec (join formInitialValue) $ do
+    (view', mres) <- formFormlet
+    res <- lift mres
+    case res of
+      Ok (Proved pos x) -> do 
+        x' <- lift x
+        pure (view', pure $ Ok $ Proved pos x')
+      Error es -> do
+        pure (view', pure $ Error es)
+  where 
+  (Form{formDecodeInput, formInitialValue, formFormlet}) = sequenceA mform
+  dec inp = do
+    res <- formDecodeInput inp
+    case res of
+      Left x -> pure $ Left x
+      Right mx -> do
+        x <- mx
+        pure $ Right x
