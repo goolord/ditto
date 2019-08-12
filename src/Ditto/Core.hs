@@ -303,3 +303,15 @@ mapFormMonad f Form{formDecodeInput, formInitialValue, formFormlet} = Form
   where
   fstate st = StateT $ f . runStateT st
 
+catchFormError :: Monad m
+  => ([err] -> a)
+  -> Form m input err view a
+  -> Form m input err view a
+catchFormError ferr Form{formDecodeInput, formInitialValue, formFormlet} = Form formDecodeInput formInitialValue $ do
+  i <- getFormId
+  (View viewf, mres) <- formFormlet
+  res <- lift mres
+  case res of
+    Ok _ -> formFormlet
+    Error err -> mkOk i (viewf []) (ferr $ fmap snd err)
+
