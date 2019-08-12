@@ -96,7 +96,7 @@ missingDefaultValue :: forall input err. FormError input err => Phantom input er
 missingDefaultValue = Phantom $ commonFormError (MissingDefaultValue :: CommonFormError input)
 
 instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
-  form >>= f = Form 
+  form >>= f = form *> Form 
     (\input -> do
       (_, mres) <- runForm "" form
       res <- mres
