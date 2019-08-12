@@ -299,54 +299,54 @@ inputChoice
   -> (input -> Either err a)
   -> (FormId -> [Choice lbl a] -> view) -- ^ function which generates the view
   -> Form m input err view a
-inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView =
-  case find isDefault (fmap fst choices) of
-    Nothing -> Form (pure . fromInput) (pure $ fst headChoice) $ do
-      undefined
-    Just defChoice -> Form (pure . fromInput) (pure defChoice) $ do
-      i <- i'
-      inp <- getFormInput' i
-      case inp of
-        Default -> do
-          let (choices', def) = markSelected choices
-          view' <- mkView i <$> augmentChoices choices'
-          mkOk' i view' def
-        Missing -> do
-          -- can happen if no choices where checked
-          let (choices', def) = markSelected choices
-          view' <- mkView i <$> augmentChoices choices'
-          mkOk' i view' def
-        Found v -> do
-          case fromInput v of
-            Left err -> do
-              let choices' =
-                    foldr
-                      ( \(a, lbl) c -> (a, lbl, False) : c )
-                      []
-                      choices
-              view' <- mkView i <$> augmentChoices choices'
-              pure
-                ( View $ const view'
-                , pure $ Error [(unitRange i, err)]
-                )
-            Right key -> do
-              let (choices', mval) =
-                    foldr
-                      ( \(a, lbl) (c, v0) ->
-                        if key == a
-                        then ((a, lbl, True) : c, Just a)
-                        else ((a, lbl, False) : c, v0)
-                      )
-                      ([], Nothing) $
-                      choices
-              view' <- mkView i <$> augmentChoices choices'
-              case mval of
-                Nothing ->
-                  pure
-                    ( View $ const view'
-                    , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
+inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView = do
+  let f = case find isDefault (fmap fst choices) of
+        Nothing -> Form (pure . fromInput) (pure $ fst headChoice)
+        Just defChoice -> Form (pure . fromInput) (pure defChoice)
+  f $ do
+    i <- i'
+    inp <- getFormInput' i
+    case inp of
+      Default -> do
+        let (choices', def) = markSelected choices
+        view' <- mkView i <$> augmentChoices choices'
+        mkOk' i view' def
+      Missing -> do
+        -- can happen if no choices where checked
+        let (choices', def) = markSelected choices
+        view' <- mkView i <$> augmentChoices choices'
+        mkOk' i view' def
+      Found v -> do
+        case fromInput v of
+          Left err -> do
+            let choices' =
+                  foldr
+                    ( \(a, lbl) c -> (a, lbl, False) : c )
+                    []
+                    choices
+            view' <- mkView i <$> augmentChoices choices'
+            pure
+              ( View $ const view'
+              , pure $ Error [(unitRange i, err)]
+              )
+          Right key -> do
+            let (choices', mval) =
+                  foldr
+                    ( \(a, lbl) (c, v0) ->
+                      if key == a
+                      then ((a, lbl, True) : c, Just a)
+                      else ((a, lbl, False) : c, v0)
                     )
-                Just val -> mkOk i view' val
+                    ([], Nothing) $
+                    choices
+            view' <- mkView i <$> augmentChoices choices'
+            case mval of
+              Nothing ->
+                pure
+                  ( View $ const view'
+                  , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
+                  )
+              Just val -> mkOk i view' val
   where
     mkOk' i view' (Just val) = mkOk i view' val
     mkOk' i view' Nothing =
