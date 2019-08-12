@@ -92,7 +92,7 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
 
 instance (Environment m input, Monoid view) => Monad (Form m input err view) where
   form@(Form{formInitialValue, formFormlet}) >>= f = form *> do
-    join $ Form errorInitialValue errorInitialValue $ do 
+    join $ Form (error "decode") (error errorInitialValue) $ do 
       (_, mres) <- formFormlet
       res <- lift mres
       range <- get
@@ -110,8 +110,8 @@ instance Functor m => Bifunctor (Form m input err) where
   first = mapView
   second = fmap
 
-errorInitialValue :: forall a. a
-errorInitialValue = error "ditto: Ditto.Core.errorInitalValue was evaluated"
+errorInitialValue :: String
+errorInitialValue = "ditto: Ditto.Core.errorInitalValue was evaluated"
 
 -- instance (Monad m, Monoid view, FormError input err) => Alternative (Form m input err view) where
 --   empty = Form 
@@ -131,7 +131,7 @@ successDecode :: Applicative m => a -> (input -> m (Either err a))
 successDecode = const . pure . Right
 
 instance (Environment m input, Monoid view, FormError input err) => MonadError [err] (Form m input err view) where
-  throwError es = Form failDecode errorInitialValue $ do
+  throwError es = Form failDecode (error errorInitialValue) $ do
     range <- get
     pure (mempty, pure $ Error $ fmap ((,) range) es)
   catchError form@(Form{formDecodeInput, formInitialValue}) e = Form formDecodeInput formInitialValue $ do
