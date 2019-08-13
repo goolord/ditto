@@ -15,6 +15,10 @@ import Data.Text (Text)
 import Torsor
 import qualified Data.Text as T
 
+------------------------------------------------------------------------------
+-- * FormId
+------------------------------------------------------------------------------
+
 -- | An ID used to identify forms
 data FormId
   = FormId
@@ -25,6 +29,8 @@ data FormId
       {-# UNPACK #-} !Int  -- ^ Index of the input
   deriving (Eq, Ord, Show)
 
+-- | Encoding a @FormId@: use this instead of @show@ for
+-- the name of the input / query string parameter
 encodeFormId :: FormId -> Text
 encodeFormId (FormId p xs) =
   p <> "-val-" <> (T.intercalate "." $ foldr (\a as -> T.pack (show a) : as) [] xs)
@@ -45,6 +51,11 @@ data FormRange
   = FormRange FormId FormId
   deriving (Eq, Show)
 
+------------------------------------------------------------------------------
+-- * Form result types - views, values as a result of the environment, etc.
+------------------------------------------------------------------------------
+
+-- | Function which creates the form view
 newtype View err v = View { unView :: [(FormRange, err)] -> v }
   deriving (Semigroup, Monoid, Functor)
 
@@ -67,6 +78,7 @@ instance Semigroup a => Semigroup (Value a) where
   _ <> Found y = Found y
 
 -- | Type for failing computations
+-- Similar to @Either@ but with an accumilating @Applicative@ instance
 data Result e ok
   = Error [(FormRange, e)]
   | Ok ok

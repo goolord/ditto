@@ -1,10 +1,7 @@
 {-# LANGUAGE 
-    DoAndIfThenElse
-  , LambdaCase
-  , NamedFieldPuns
+    NamedFieldPuns
   , OverloadedStrings
   , ScopedTypeVariables
-  , TypeFamilies 
 #-}
 
 -- This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
@@ -20,8 +17,7 @@ import Ditto.Core
 import Ditto.Types
 
 -- | used for constructing elements like @\<input type=\"text\"\>@, which pure a single input value.
-input
-  :: forall m input err a view. (Environment m input, FormError input err)
+input :: forall m input err a view. (Environment m input, FormError input err)
   => FormState m FormId
   -> (input -> Either err a)
   -> (FormId -> a -> view)
@@ -62,8 +58,7 @@ input formSId fromInput toView initialValue =
         )
 
 -- | this is necessary in order to basically map over the decoding function
-inputList
-  :: forall m input err a view. (Monad m, FormError input err, Environment m input)
+inputList :: forall m input err a view. (Monad m, FormError input err, Environment m input)
   => FormState m FormId
   -> (input -> Either err [a])
   -> ([view] -> view)
@@ -122,8 +117,7 @@ inputList formSId fromInput viewCat failVal initialValue createForm =
           )
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
-inputMaybe
-  :: (Monad m, FormError input err, Environment m input)
+inputMaybe :: (Monad m, FormError input err, Environment m input)
   => FormState m FormId
   -> (input -> Either err a)
   -> (FormId -> Maybe a -> view)
@@ -171,8 +165,7 @@ inputMaybe i' fromInput toView initialValue =
         )
 
 -- | used for elements like @\<input type=\"reset\"\>@ which take a value, but are never present in the form data set.
-inputNoData
-  :: (Monad m)
+inputNoData :: (Monad m)
   => FormState m FormId
   -> (FormId -> view)
   -> Form m input err view ()
@@ -191,8 +184,7 @@ inputNoData i' toView =
       )
 
 -- | used for @\<input type=\"file\"\>@
-inputFile
-  :: forall m input err view. (Monad m, FormInput input, FormError input err, Environment m input)
+inputFile :: forall m input err view. (Monad m, FormInput input, FormError input err, Environment m input)
   => FormState m FormId
   -> (FormId -> view)
   -> Form m input err view (FileType input)
@@ -232,8 +224,7 @@ inputFile i' toView =
     getInputFile' = getInputFile
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
-inputMulti
-  :: forall m input err view a lbl. (FormError input err, FormInput input, Environment m input, Eq a)
+inputMulti :: forall m input err view a lbl. (FormError input err, FormInput input, Environment m input, Eq a)
   => FormState m FormId
   -> [(a, lbl)] -- ^ value, label, initially checked
   -> (input -> Either err [a])
@@ -291,8 +282,7 @@ data Choice lbl a = Choice
   }
 
 -- | radio buttons, single @\<select\>@ boxes
-inputChoice
-  :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a, Monoid view, Environment m input)
+inputChoice :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a, Monoid view, Environment m input)
   => FormState m FormId
   -> (a -> Bool) -- ^ is default
   -> NonEmpty (a, lbl) -- ^ value, label
@@ -372,8 +362,7 @@ inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView = do
       pure $ Choice i lbl selected a
 
 -- | used to create @\<label\>@ elements
-label
-  :: Monad m
+label :: Monad m
   => FormState m FormId
   -> (FormId -> view)
   -> Form m input err view ()
@@ -394,8 +383,7 @@ label i' f = Form (successDecode ()) (pure ()) $ do
 -- This function automatically takes care of extracting only the
 -- errors that are relevent to the form element it is attached to via
 -- '<*' or '*>'.
-errors
-  :: Monad m
+errors :: Monad m
   => ([err] -> view) -- ^ function to convert the err messages into a view
   -> Form m input err view ()
 errors f = Form (successDecode ()) (pure ()) $ do
@@ -411,8 +399,7 @@ errors f = Form (successDecode ()) (pure ()) $ do
     )
 
 -- | similar to 'errors' but includes err messages from children of the form as well.
-childErrors
-  :: Monad m
+childErrors :: Monad m
   => ([err] -> view)
   -> Form m input err view ()
 childErrors f = Form (successDecode ()) (pure ()) $ do
@@ -428,8 +415,7 @@ childErrors f = Form (successDecode ()) (pure ()) $ do
     )
 
 -- | modify the view of a form based on its errors
-withErrors
-  :: Monad m
+withErrors :: Monad m
   => (view -> [err] -> view)
   -> Form m input err view a
   -> Form m input err view a
