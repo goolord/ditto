@@ -170,7 +170,7 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
             iv <- lift $ formInitialValue form
             (View viewF, _) <- formFormlet $ f iv
             pure (View $ const $ viewF0 errs <> viewF [], pure $ Error errs)
-          Ok (Proved _ x) -> formFormlet (f x)
+          Ok (Proved _ x) -> fmap (first (\(View v) -> View $ \e -> viewF0 [] <> v e)) $ formFormlet (f x)
       )
   return = pure
   (>>) = (*>) -- way more efficient than the default
