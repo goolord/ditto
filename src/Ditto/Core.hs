@@ -95,7 +95,7 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
     -- range <- get
     pure  ( mempty
           , pure $ Ok $ Proved
-              { pos = FormRange (FormId "test" 69) (FormId "ass" 420)
+              { pos = FormRange (FormIdCustom "test" 69) (FormIdCustom "ass" 420)
               , unProved = x
               }
           )
