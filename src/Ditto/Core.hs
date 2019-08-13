@@ -168,9 +168,9 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
         case res of
           Error errs -> do 
             iv <- lift $ formInitialValue form
-            range <- get
+            formId <- getFormId
             (View viewF, _) <- formFormlet $ f iv
-            case find (\(erange, _) -> range `isSubRange` erange) errs of
+            case find (\(FormRange base _, _) -> base == formId) errs of
               Just err -> pure (View $ const $ viewF [err], pure $ Error errs)
               Nothing -> pure (View $ const $ viewF [], pure $ Error errs)
           Ok (Proved _ x) -> formFormlet (f x)
