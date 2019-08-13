@@ -14,7 +14,7 @@ The 'FormError' class is used to map error messages into an application specific
 module Ditto.Backend where
 
 import Data.Text (Text)
-import Ditto.Types (FormId)
+import Ditto.Types (FormId, encodeFormId)
 import qualified Data.Text as T
 
 -- | an error type used to represent errors that are common to all backends
@@ -37,7 +37,7 @@ commonFormErrorStr
   -> CommonFormError input -- ^ a 'CommonFormError'
   -> String
 commonFormErrorStr showInput cfe = case cfe of
-  InputMissing formId -> "Input field missing for " ++ show formId
+  InputMissing formId -> "Input field missing for " ++ (T.unpack . encodeFormId) formId
   NoStringFound input -> "Could not extract a string value from: " ++ showInput input
   NoFileFound input -> "Could not find a file associated with: " ++ showInput input
   MultiFilesFound input -> "Found multiple files associated with: " ++ showInput input
@@ -50,7 +50,7 @@ commonFormErrorText
   -> CommonFormError input -- ^ a 'CommonFormError'
   -> Text
 commonFormErrorText showInput cfe = case cfe of
-  InputMissing formId -> "Input field missing for " <> T.pack (show formId)
+  InputMissing formId -> "Input field missing for " <> encodeFormId formId
   NoStringFound input -> "Could not extract a string value from: " <> showInput input
   NoFileFound input -> "Could not find a file associated with: " <> showInput input
   MultiFilesFound input -> "Found multiple files associated with: " <> showInput input
