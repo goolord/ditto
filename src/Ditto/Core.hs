@@ -169,13 +169,10 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
         res <- lift mres
         case res of
           Error errs -> do 
+            iv <- lift $ formInitialValue form
+            (View viewF, _) <- formFormlet $ f iv
             formId <- getFormId
             trace ("formId" ++ show formId) (pure ())
-            iv <- lift $ formInitialValue form
-            _ <- do
-              newFormId <- getFormId
-              trace ("newFormId" ++ show newFormId) (pure ())
-            (View viewF, _) <- formFormlet $ f iv
             case find (\(fr@(FormRange base _), _) -> trace ("fr: " ++ show fr) $ base == formId) errs of
               Just err -> pure (View $ const $ viewF [err], pure $ Error errs)
               Nothing -> pure (View $ const $ viewF [], pure $ Error [])
