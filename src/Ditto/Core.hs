@@ -92,10 +92,10 @@ data Form m input err view a = Form
 instance (Monad m, Monoid view) => Applicative (Form m input err view) where
 
   pure x = Form (successDecode x) (pure x) $ do
-    i <- getFormId
+    range <- get
     pure  ( mempty
           , pure $ Ok $ Proved
-              { pos = FormRange i i
+              { pos = range
               , unProved = x
               }
           )
