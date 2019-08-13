@@ -172,7 +172,7 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
             (View viewF, _) <- formFormlet $ f iv
             case find (\(FormRange base _, _) -> base == formId) errs of
               Just err -> pure (View $ const $ viewF [err], pure $ Error errs)
-              Nothing -> pure (View $ const $ viewF [], pure $ Error errs)
+              Nothing -> pure (View $ const $ viewF [], pure $ Error [])
           Ok (Proved _ x) -> formFormlet (f x)
       )
   return = pure
