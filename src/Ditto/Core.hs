@@ -287,7 +287,10 @@ view html = Form (successDecode ()) (pure ()) $ do
             }
         )
 
-mapFormMonad :: Monad f => (forall x. m x -> f x) -> Form m input err view a -> Form f input err view a
+mapFormMonad :: (Monad f)
+  => (forall x. m x -> f x)
+  -> Form m input err view a
+  -> Form f input err view a
 mapFormMonad f Form{formDecodeInput, formInitialValue, formFormlet} = Form 
   { formDecodeInput = f . formDecodeInput
   , formInitialValue = f formInitialValue
@@ -298,7 +301,7 @@ mapFormMonad f Form{formDecodeInput, formInitialValue, formFormlet} = Form
   where
   fstate st = StateT $ f . runStateT st
 
-catchFormError :: Monad m
+catchFormError :: (Monad m)
   => ([err] -> a)
   -> Form m input err view a
   -> Form m input err view a
@@ -310,7 +313,10 @@ catchFormError ferr Form{formDecodeInput, formInitialValue, formFormlet} = Form 
     Ok _ -> formFormlet
     Error err -> mkOk i (viewf []) (ferr $ fmap snd err)
 
-catchFormErrorM :: Monad m => Form m input err view a -> ([err] -> Form m input err view a) -> Form m input err view a
+catchFormErrorM :: (Monad m)
+  => Form m input err view a
+  -> ([err] -> Form m input err view a)
+  -> Form m input err view a
 catchFormErrorM form@(Form{formDecodeInput, formInitialValue}) e = Form formDecodeInput formInitialValue $ do
   (_, mres0) <- formFormlet form
   res0 <- lift mres0

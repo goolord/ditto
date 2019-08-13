@@ -1,10 +1,10 @@
 {-# LANGUAGE 
-    TypeFamilies 
-  , DoAndIfThenElse
-  , ScopedTypeVariables
-  , OverloadedStrings
+    DoAndIfThenElse
   , LambdaCase
   , NamedFieldPuns
+  , OverloadedStrings
+  , ScopedTypeVariables
+  , TypeFamilies 
 #-}
 
 -- This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
@@ -160,15 +160,15 @@ inputMaybe i' fromInput toView initialValue =
           , pure $ Error [(unitRange i, err)]
           )
       Missing -> pure
-          ( View $ const $ toView i initialValue
-          , pure $
-            Ok
-              ( Proved
-                { pos = unitRange i
-                , unProved = Nothing
-                }
-              )
-          )
+        ( View $ const $ toView i initialValue
+        , pure $
+          Ok
+            ( Proved
+              { pos = unitRange i
+              , unProved = Nothing
+              }
+            )
+        )
 
 -- | used for elements like @\<input type=\"reset\"\>@ which take a value, but are never present in the form data set.
 inputNoData
@@ -393,7 +393,7 @@ label i' f = Form (successDecode ()) (pure ()) $ do
 --
 -- This function automatically takes care of extracting only the
 -- errors that are relevent to the form element it is attached to via
--- '<++' or '++>'.
+-- '<*' or '*>'.
 errors
   :: Monad m
   => ([err] -> view) -- ^ function to convert the err messages into a view
