@@ -55,7 +55,6 @@ import Control.Monad.Reader
 import Control.Monad.State.Lazy
 import Data.Bifunctor
 import Data.Text (Text)
-import Data.List (find)
 import Ditto.Types
 import Ditto.Backend
 import Torsor
@@ -143,7 +142,7 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
     (v2, _) <- formFormlet f2
     pure (v1 <> v2, r)
 
-instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
+instance (Environment m input, Monoid view, FormError input err, Show err) => Monad (Form m input err view) where
   form >>= f = form *> 
     let mres = do 
         (~_, mr) <- runForm "" form 
@@ -169,17 +168,10 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
         res <- lift mres
         case res of
           Error errs -> do 
+            traceShow errs (pure ())
             iv <- lift $ formInitialValue form
-            (View viewF, mres1) <- formFormlet $ f iv
-            res1 <- lift mres1
-            let formRange = case res1 of
-                  Ok (Proved r _) -> trace "Ok (Proved r _)" r
-                  Error rs@((r,_):_) -> trace "Error ((r,_):_)" $ traceShow (map fst rs) r
-                  Error [] -> trace "Error []" $ FormRange (FormIdCustom "empty" 0) (FormIdCustom "empty" 0)
-            trace ("formRange: " ++ show formRange) (pure ())
-            case find (\(fr, _) -> trace ("fr: " ++ show fr) $ fr == formRange) errs of
-              Just err -> pure (View $ const $ viewF [err], pure $ Error errs)
-              Nothing -> pure (View $ const $ viewF [], pure $ Error [])
+            (View viewF, _) <- formFormlet $ f iv
+            pure (View $ const $ viewF errs, pure $ Error errs)
           Ok (Proved _ x) -> formFormlet (f x)
       )
   return = pure
@@ -198,7 +190,7 @@ instance Functor m => Bifunctor (Form m input err) where
 errorInitialValue :: String
 errorInitialValue = "ditto: Ditto.Core.errorInitalValue was evaluated"
 
-instance (Monad m, Monoid view, FormError input err, Environment m input) => Alternative (Form m input err view) where
+instance (Show err, Monad m, Monoid view, FormError input err, Environment m input) => Alternative (Form m input err view) where
   empty = Form 
     failDecodeMDF
     (error errorInitialValue)
