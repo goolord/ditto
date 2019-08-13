@@ -170,7 +170,11 @@ instance (Environment m input, Monoid view, FormError input err, Show err) => Mo
           Error errs -> do 
             traceShow errs (pure ())
             iv <- lift $ formInitialValue form
-            (View viewF, _) <- formFormlet $ f iv
+            (View viewF, mres0) <- formFormlet $ f iv
+            res0 <- lift mres0
+            case res0 of
+              Error errs' -> traceShow errs' (pure ())
+              Ok (Proved pos _) -> traceShow pos (pure ())
             pure (View $ const $ viewF errs, pure $ Error errs)
           Ok (Proved _ x) -> formFormlet (f x)
       )
