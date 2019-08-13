@@ -168,7 +168,7 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
           Error errs -> do 
             iv <- lift $ formInitialValue form
             (View viewF, _) <- formFormlet $ f iv
-            pure (View $ const $ viewF errs, pure $ Error errs )
+            pure (View $ const $ viewF [], pure $ Error [])
           Ok (Proved _ x) -> formFormlet (f x)
       )
   return = pure
