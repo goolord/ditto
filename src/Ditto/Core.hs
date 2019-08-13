@@ -55,6 +55,7 @@ import Control.Monad.Reader
 import Control.Monad.State.Lazy
 import Data.Bifunctor
 import Data.Text (Text)
+import Data.List (find)
 import Ditto.Types
 import Ditto.Backend
 import Torsor
@@ -167,8 +168,11 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
         case res of
           Error errs -> do 
             iv <- lift $ formInitialValue form
+            range <- get
             (View viewF, _) <- formFormlet $ f iv
-            pure (View $ const $ viewF [], pure $ Error [])
+            case find (\(erange, _) -> range `isSubRange` erange) errs of
+              Just err -> pure (View $ const $ viewF [err], pure $ Error errs)
+              Nothing -> pure (View $ const $ viewF [], pure $ Error errs)
           Ok (Proved _ x) -> formFormlet (f x)
       )
   return = pure
