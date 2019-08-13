@@ -59,8 +59,6 @@ import Ditto.Types
 import Ditto.Backend
 import Torsor
 
-import Debug.Trace
-
 ------------------------------------------------------------------------------
 -- Environment
 ------------------------------------------------------------------------------
@@ -92,10 +90,10 @@ data Form m input err view a = Form
 instance (Monad m, Monoid view) => Applicative (Form m input err view) where
 
   pure x = Form (successDecode x) (pure x) $ do
-    -- range <- get
+    i <- getFormId
     pure  ( mempty
           , pure $ Ok $ Proved
-              { pos = FormRange (FormIdCustom "test" 69) (FormIdCustom "ass" 420)
+              { pos = FormRange i i
               , unProved = x
               }
           )
@@ -142,8 +140,8 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
     (v2, _) <- formFormlet f2
     pure (v1 <> v2, r)
 
-instance (Environment m input, Monoid view, FormError input err, Show err) => Monad (Form m input err view) where
-  form >>= f = form *> 
+instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
+  form >>= f =
     let mres = do 
         (~_, mr) <- runForm "" form 
         mr
@@ -165,17 +163,13 @@ instance (Environment m input, Monoid view, FormError input err, Show err) => Mo
           Ok (Proved _ x) -> formInitialValue (f x)
       )
       (do
-        res <- lift mres
-        case res of
+        (View viewF0, mres0) <- formFormlet form
+        res0 <- lift mres0
+        case res0 of
           Error errs -> do 
-            traceShow errs (pure ())
             iv <- lift $ formInitialValue form
-            (View viewF, mres0) <- formFormlet $ f iv
-            res0 <- lift mres0
-            case res0 of
-              Error errs' -> traceShow errs' (pure ())
-              Ok (Proved pos _) -> traceShow pos (pure ())
-            pure (View $ const $ viewF errs, pure $ Error errs)
+            (View viewF, _) <- formFormlet $ f iv
+            pure (View $ const $ viewF0 errs <> viewF [], pure $ Error errs)
           Ok (Proved _ x) -> formFormlet (f x)
       )
   return = pure
@@ -194,7 +188,7 @@ instance Functor m => Bifunctor (Form m input err) where
 errorInitialValue :: String
 errorInitialValue = "ditto: Ditto.Core.errorInitalValue was evaluated"
 
-instance (Show err, Monad m, Monoid view, FormError input err, Environment m input) => Alternative (Form m input err view) where
+instance (Monad m, Monoid view, FormError input err, Environment m input) => Alternative (Form m input err view) where
   empty = Form 
     failDecodeMDF
     (error errorInitialValue)
