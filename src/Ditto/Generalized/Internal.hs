@@ -4,7 +4,7 @@
   , ScopedTypeVariables
 #-}
 
--- This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
+-- | This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
 
 module Ditto.Generalized.Internal where
 
@@ -331,11 +331,10 @@ inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView = do
                     choices
             view' <- mkView i <$> augmentChoices choices'
             case mval of
-              Nothing ->
-                pure
-                  ( View $ const view'
-                  , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
-                  )
+              Nothing -> pure
+                ( View $ const view'
+                , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
+                )
               Just val -> mkOk i view' val
   where
     mkOk' i view' (Just val) = mkOk i view' val

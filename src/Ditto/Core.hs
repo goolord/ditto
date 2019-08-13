@@ -33,6 +33,7 @@ module Ditto.Core (
   , getFormId
   , getFormInput
   , getFormInput'
+  , getFormRange
   , getNamedFormId
   , incrementFormId
   , isInRange
@@ -250,6 +251,10 @@ getFormId :: Monad m => FormState m FormId
 getFormId = do
   FormRange x _ <- get
   pure x
+
+-- | Utility function: Get the current range
+getFormRange :: Monad m => FormState m FormRange
+getFormRange = get
 
 -- | Get a @FormIdCustom@ from the FormState
 getNamedFormId :: Monad m => Text -> FormState m FormId
