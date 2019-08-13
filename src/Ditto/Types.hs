@@ -10,11 +10,9 @@
 
 module Ditto.Types where
 
-import Data.Foldable (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text)
 import Torsor
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 
 -- | An ID used to identify forms
@@ -29,10 +27,7 @@ data FormId
 
 encodeFormId :: FormId -> Text
 encodeFormId (FormId p xs) =
-  p <> "-fval-" <> (T.intercalate "." $ reverseMap (T.pack . show) $ NE.toList xs)
-  where
-  reverseMap :: Foldable t => (a -> b) -> t a -> [b]
-  reverseMap f = foldl' (\as a -> f a : as ) []
+  p <> "-val-" <> (T.intercalate "." $ foldr (\a as -> T.pack (show a) : as) [] xs)
 encodeFormId (FormIdCustom x _) = x
 
 -- | get the head 'Int' from a 'FormId'
@@ -49,12 +44,6 @@ instance Torsor FormId Int where
 data FormRange
   = FormRange FormId FormId
   deriving (Eq, Show)
-
-instance Semigroup FormRange where
-  (FormRange start _) <> (FormRange _ end) = FormRange start end
-
-instance Monoid FormRange where
-  mempty = FormRange (FormIdCustom "mempty" 0) (FormIdCustom "mempty" 0)
 
 newtype View err v = View { unView :: [(FormRange, err)] -> v }
   deriving (Semigroup, Monoid, Functor)

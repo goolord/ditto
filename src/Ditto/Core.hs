@@ -45,6 +45,7 @@ data Form m input err view a = Form
   } deriving (Functor)
 
 instance (Monad m, Monoid view) => Applicative (Form m input err view) where
+
   pure x = Form (successDecode x) (pure x) $ do
     i <- getFormId
     pure  ( mempty
@@ -53,6 +54,7 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
               , unProved = x
               }
           )
+
   (Form df ivF frmF) <*> (Form da ivA frmA) =
     Form (\inp -> do 
         f <- df inp
@@ -79,6 +81,18 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
               , unProved = f a
               }
             )
+
+  f1 *> f2 = Form (formDecodeInput f2) (formInitialValue f2) $ do
+      -- Evaluate the form that matters first, so we have a correct range set
+      (v2, r) <- formFormlet f2
+      (v1, _) <- formFormlet f1
+      return (v1 <> v2, r)
+
+  f1 <* f2 = Form (formDecodeInput f1) (formInitialValue f1) $ do
+      -- Evaluate the form that matters first, so we have a correct range set
+      (v1, r) <- formFormlet f1
+      (v2, _) <- formFormlet f2
+      return (v1 <> v2, r)
 
 newtype Phantom a b = Phantom { getPhantom :: b }
 
@@ -149,8 +163,7 @@ successDecode = const . pure . Right
 -- | Change the view of a form using a simple function
 --
 -- This is useful for wrapping a form inside of a \<fieldset\> or other markup element.
-mapView
-  :: (Functor m)
+mapView :: (Functor m)
   => (view -> view') -- ^ Manipulator
   -> Form m input err view a -- ^ Initial form
   -> Form m input err view' a -- ^ Resulting form
@@ -212,6 +225,37 @@ runForm :: Monad m
   -> m (View err view, m (Result err (Proved a)))
 runForm prefix Form{formFormlet} =
   evalStateT formFormlet (unitRange (FormId prefix (pure 0)))
+
+-- | Run a form
+runForm_ :: (Monad m)
+  => Text
+  -> Form m input err view a
+  -> m (view , Maybe a)
+runForm_ prefix form = do 
+  (view', mresult) <- runForm prefix form
+  result <- mresult
+  pure $ case result of
+    Error e -> (unView view' e , Nothing)
+    Ok x -> (unView view' [], Just (unProved x))
+
+-- | Evaluate a form
+--
+-- Returns:
+--
+-- [@Left view@] on failure. The @view@ will have already been applied to the errors.
+--
+-- [@Right a@] on success.
+--
+eitherForm :: (Monad m)
+  => Text -- ^ Identifier for the form
+  -> Form m input err view a -- ^ Form to run
+  -> m (Either view a) -- ^ Result
+eitherForm id' form = do
+  (view', mresult) <- runForm id' form
+  result <- mresult
+  return $ case result of
+    Error e -> Left $ unView view' e
+    Ok x -> Right (unProved x)
 
 -- | infix mapView: succinctly mix the @view@ dsl and the formlets dsl  @foo @$ do ..@
 infixr 0 @$
