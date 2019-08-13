@@ -2,7 +2,9 @@
     ScopedTypeVariables
 #-}
 
--- This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
+-- | This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
+--
+-- For unnamed (enumerated) formlets, see @Ditto.Generalized.Unnamed@
 
 module Ditto.Generalized.Named
   ( G.Choice(..)

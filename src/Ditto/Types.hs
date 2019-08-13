@@ -8,7 +8,19 @@
   , OverloadedStrings
 #-}
 
-module Ditto.Types where
+-- | Types relevant to forms and their validation.
+module Ditto.Types (
+  -- * FormId
+    FormId(..)
+  , FormRange(..)
+  , encodeFormId
+  , formIdentifier
+  -- * Form result types
+  , Value(..)
+  , View(..)
+  , Proved(..)
+  , Result(..)
+  ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text)
@@ -16,7 +28,7 @@ import Torsor
 import qualified Data.Text as T
 
 ------------------------------------------------------------------------------
--- * FormId
+-- FormId
 ------------------------------------------------------------------------------
 
 -- | An ID used to identify forms
@@ -52,8 +64,10 @@ data FormRange
   deriving (Eq, Show)
 
 ------------------------------------------------------------------------------
--- * Form result types - views, values as a result of the environment, etc.
+-- Form result types
 ------------------------------------------------------------------------------
+
+-- | views, values as a result of the environment, etc.
 
 -- | Function which creates the form view
 newtype View err v = View { unView :: [(FormRange, err)] -> v }

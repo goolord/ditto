@@ -9,7 +9,45 @@
   , ScopedTypeVariables
 #-}
 
-module Ditto.Core where
+-- | The core module for @ditto@. 
+--
+-- This module provides the @Form@ type and helper functions 
+-- for constructing typesafe forms inside arbitrary "views" / web frameworks.
+-- @ditto@ is meant to be a generalized formlet library used to write
+-- formlet libraries specific to a web / gui framework
+module Ditto.Core (
+  -- * Environment
+  -- | The interface to a given web framework
+    Environment(..)
+  , NoEnvironment(..)
+  , noEnvironment
+  -- * Form types
+  -- | The representation of formlets
+  , FormState
+  , Form(..)
+  -- * Utility functions
+  , (@$)
+  , catchFormError
+  , catchFormErrorM
+  , eitherForm
+  , getFormId
+  , getFormInput
+  , getFormInput'
+  , getNamedFormId
+  , incrementFormId
+  , isInRange
+  , mapFormMonad
+  , mapView
+  , mkOk
+  , retainChildErrors
+  , retainErrors
+  , runForm
+  , runForm_
+  , successDecode
+  , unitRange
+  , view
+  , viewForm
+  ) where
 
 import Control.Applicative
 import Control.Monad.Reader
@@ -21,7 +59,7 @@ import Ditto.Backend
 import Torsor
 
 ------------------------------------------------------------------------------
--- * Environment - The interface to a given web framework
+-- Environment
 ------------------------------------------------------------------------------
 
 class Monad m => Environment m input | m -> input where
@@ -37,7 +75,7 @@ noEnvironment :: Applicative m => FormId -> m (Value input)
 noEnvironment = const (pure Default)
 
 ------------------------------------------------------------------------------
--- * Form types - The representation of formlets
+-- Form types
 ------------------------------------------------------------------------------
 
 type FormState m = StateT FormRange m
@@ -90,23 +128,23 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
       )
 
   f1 *> f2 = Form (formDecodeInput f2) (formInitialValue f2) $ do
-      -- Evaluate the form that matters first, so we have a correct range set
-      (v2, r) <- formFormlet f2
-      (v1, _) <- formFormlet f1
-      return (v1 <> v2, r)
+    -- Evaluate the form that matters first, so we have a correct range set
+    (v2, r) <- formFormlet f2
+    (v1, _) <- formFormlet f1
+    pure (v1 <> v2, r)
 
   f1 <* f2 = Form (formDecodeInput f1) (formInitialValue f1) $ do
-      -- Evaluate the form that matters first, so we have a correct range set
-      (v1, r) <- formFormlet f1
-      (v2, _) <- formFormlet f2
-      return (v1 <> v2, r)
+    -- Evaluate the form that matters first, so we have a correct range set
+    (v1, r) <- formFormlet f1
+    (v2, _) <- formFormlet f2
+    pure (v1 <> v2, r)
 
 instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
   form >>= f = form *> 
     let mres = do 
         (~_, mr) <- runForm "" form 
         mr
-    in Form 
+    in Form
       (\input -> do
         res <- mres
         case res of
@@ -129,7 +167,7 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
           Error {} -> do 
             iv <- lift $ formInitialValue form
             formFormlet $ f iv
-          Ok (Proved _ x) -> formFormlet $ f x
+          Ok (Proved _ x) -> formFormlet (f x)
       )
   return = pure
   (>>) = (*>) -- way more efficient than the default
@@ -158,6 +196,10 @@ instance (Monad m, Monoid view, FormError input err, Environment m input) => Alt
       Right{} -> formA
       Left{} -> formB
 
+------------------------------------------------------------------------------
+-- Utility functions
+------------------------------------------------------------------------------
+
 failDecodeMDF :: forall m input err a. (Applicative m, FormError input err) => input -> m (Either err a)
 failDecodeMDF = const $ pure $ Left err
   where
@@ -169,9 +211,7 @@ failDecodeMDF = const $ pure $ Left err
 successDecode :: Applicative m => a -> (input -> m (Either err a))
 successDecode = const . pure . Right
 
-------------------------------------------------------------------------------
--- * Utility functions - Common operations on @Form@s
-------------------------------------------------------------------------------
+-- | Common operations on @Form@s
 
 -- | Change the view of a form using a simple function
 --
@@ -235,6 +275,7 @@ incrementFormRange = do
   FormRange _ endF1 <- get
   put $ unitRange endF1
 
+-- | Run a form
 runForm :: Monad m 
   => Text
   -> Form m input err view a
@@ -242,7 +283,7 @@ runForm :: Monad m
 runForm prefix Form{formFormlet} =
   evalStateT formFormlet (unitRange (FormId prefix (pure 0)))
 
--- | Run a form
+-- | Run a form, and unwrap the result
 runForm_ :: (Monad m)
   => Text
   -> Form m input err view a
@@ -273,7 +314,7 @@ eitherForm id' form = do
     Error e -> Left $ unView view' e
     Ok x -> Right (unProved x)
 
--- | infix mapView: succinctly mix the @view@ dsl and the formlets dsl  @foo @$ do ..@
+-- | infix mapView: succinctly mix the @view@ dsl and the formlets dsl  @foo \@$ do ..@
 infixr 0 @$
 (@$) :: Monad m => (view -> view) -> Form m input err view a -> Form m input err view a
 (@$) = mapView
@@ -349,6 +390,7 @@ view html = Form (successDecode ()) (pure ()) $ do
             }
         )
 
+-- | Change the underlying Monad of the form, usually a @lift@ or newtype
 mapFormMonad :: (Monad f)
   => (forall x. m x -> f x)
   -> Form m input err view a
