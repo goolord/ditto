@@ -2,7 +2,7 @@ ditto [![Hackage](https://img.shields.io/hackage/v/ditto.svg)](https://hackage.h
 =========
 
 ![Image of ditto from pokemon](https://i.imgur.com/0i7qeeW.png)
-> ditto takes many forms
+> Its transformation ability is perfect. However, if it is made to laugh, it can't maintain its disguise. 
 
 A portable library which provides type-safe form generation and validation.
 
