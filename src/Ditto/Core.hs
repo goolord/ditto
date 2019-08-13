@@ -173,10 +173,10 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
             (View viewF, mres1) <- formFormlet $ f iv
             res1 <- lift mres1
             let formRange = case res1 of
-                  Ok (Proved r _) -> r
-                  Error ((r,_):_) -> r
-                  Error [] -> FormRange (FormIdCustom "empty" 0) (FormIdCustom "empty" 0)
-            trace ("formRange" ++ show formRange) (pure ())
+                  Ok (Proved r _) -> trace "Ok (Proved r _)" r
+                  Error rs@((r,_):_) -> trace "Error ((r,_):_)" $ traceShow (map fst rs) r
+                  Error [] -> trace "Error []" $ FormRange (FormIdCustom "empty" 0) (FormIdCustom "empty" 0)
+            trace ("formRange: " ++ show formRange) (pure ())
             case find (\(fr, _) -> trace ("fr: " ++ show fr) $ fr == formRange) errs of
               Just err -> pure (View $ const $ viewF [err], pure $ Error errs)
               Nothing -> pure (View $ const $ viewF [], pure $ Error [])
