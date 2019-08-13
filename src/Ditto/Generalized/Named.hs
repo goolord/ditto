@@ -88,7 +88,7 @@ label name = G.label (getNamedFormId name)
 --
 -- This function automatically takes care of extracting only the
 -- errors that are relevent to the form element it is attached to via
--- '<++' or '++>'.
+-- '<*' or '*>'.
 errors :: Environment m input
   => ([err] -> view) -- ^ function to convert the err messages into a view
   -> Form m input err view ()

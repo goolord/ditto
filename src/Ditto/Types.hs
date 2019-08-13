@@ -1,29 +1,30 @@
 {-# LANGUAGE 
-    MultiParamTypeClasses 
-  , DeriveFunctor
+    BangPatterns
   , DeriveFoldable
+  , DeriveFunctor
   , DeriveTraversable
   , GeneralizedNewtypeDeriving
+  , MultiParamTypeClasses 
   , OverloadedStrings
 #-}
 
 module Ditto.Types where
 
-import Torsor
-import Data.Text (Text)
-import Data.List.NonEmpty (NonEmpty (..))
 import Data.Foldable (foldl')
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Text (Text)
+import Torsor
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 
 -- | An ID used to identify forms
 data FormId
   = FormId
-    Text           -- ^ Global prefix for the form
-    (NonEmpty Int) -- ^ Stack indicating field. Head is most specific to this item
+      {-# UNPACK #-} !Text           -- ^ Global prefix for the form
+      {-# UNPACK #-} !(NonEmpty Int) -- ^ Stack indicating field. Head is most specific to this item
   | FormIdCustom 
-    Text -- ^ Local name of the input
-    Int  -- ^ Index of the input
+      {-# UNPACK #-} !Text -- ^ Local name of the input
+      {-# UNPACK #-} !Int  -- ^ Index of the input
   deriving (Eq, Ord, Show)
 
 encodeFormId :: FormId -> Text
@@ -65,7 +66,7 @@ data Value a
   = Default
   | Missing
   | Found a
-  deriving (Eq, Show, Functor)
+  deriving (Eq, Show, Functor, Traversable, Foldable)
 
 instance Semigroup a => Semigroup (Value a) where
   Missing <> Missing = Missing
@@ -86,5 +87,4 @@ data Result e ok
 data Proved a = Proved
   { pos :: FormRange
   , unProved :: a
-  }
-  deriving (Show, Functor, Foldable, Traversable)
+  } deriving (Show, Functor, Foldable, Traversable)
