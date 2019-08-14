@@ -17,16 +17,16 @@
 -- @ditto@ is meant to be a generalized formlet library used to write
 -- formlet libraries specific to a web / gui framework
 module Ditto.Core (
+  -- * Form types
+  -- | The representation of formlets
+    FormState
+  , Form(..)
   -- * Environment
   -- | The interface to a given web framework
-    Environment(..)
+  , Environment(..)
   , NoEnvironment(..)
   , WithEnvironment(..)
   , noEnvironment
-  -- * Form types
-  -- | The representation of formlets
-  , FormState
-  , Form(..)
   -- * Utility functions
   , (@$)
   , catchFormError
@@ -61,35 +61,6 @@ import Data.Text (Text)
 import Ditto.Types
 import Ditto.Backend
 import Torsor
-
-------------------------------------------------------------------------------
--- Environment
-------------------------------------------------------------------------------
-
-class Monad m => Environment m input | m -> input where
-  environment :: FormId -> m (Value input)
-
-newtype NoEnvironment input m a = NoEnvironment { getNoEnvironment ::  m a }
-  deriving (Monad, Functor, Applicative)
-
-instance Monad m => Environment (NoEnvironment input m) input where
-  environment = noEnvironment
-
-noEnvironment :: Applicative m => FormId -> m (Value input)
-noEnvironment = const (pure Default)
-
-newtype WithEnvironment input m a = WithEnvironment { getWithEnvironment :: ReaderT (FormId -> m (Value input)) m a }
-  deriving (Monad, Functor, Applicative)
-
-deriving instance Monad m => MonadReader (FormId -> m (Value input)) (WithEnvironment input m)
-
-instance MonadTrans (WithEnvironment input) where
-  lift = WithEnvironment . lift
-
-instance Monad m => Environment (WithEnvironment input m) input where
-  environment fid = do
-    f <- ask
-    lift $ f fid
 
 ------------------------------------------------------------------------------
 -- Form types
@@ -214,6 +185,35 @@ instance (Monad m, Monoid view, FormError input err, Environment m input) => Alt
     case efA of
       Right{} -> formA
       Left{} -> formB
+
+------------------------------------------------------------------------------
+-- Environment
+------------------------------------------------------------------------------
+
+class Monad m => Environment m input | m -> input where
+  environment :: FormId -> m (Value input)
+
+newtype NoEnvironment input m a = NoEnvironment { getNoEnvironment ::  m a }
+  deriving (Monad, Functor, Applicative)
+
+instance Monad m => Environment (NoEnvironment input m) input where
+  environment = noEnvironment
+
+noEnvironment :: Applicative m => FormId -> m (Value input)
+noEnvironment = const (pure Default)
+
+newtype WithEnvironment input m a = WithEnvironment { getWithEnvironment :: ReaderT (FormId -> m (Value input)) m a }
+  deriving (Monad, Functor, Applicative)
+
+deriving instance Monad m => MonadReader (FormId -> m (Value input)) (WithEnvironment input m)
+
+instance MonadTrans (WithEnvironment input) where
+  lift = WithEnvironment . lift
+
+instance Monad m => Environment (WithEnvironment input m) input where
+  environment fid = do
+    f <- ask
+    lift $ f fid
 
 ------------------------------------------------------------------------------
 -- Utility functions
