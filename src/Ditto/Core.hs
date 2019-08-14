@@ -7,6 +7,7 @@
   , OverloadedStrings
   , RankNTypes
   , ScopedTypeVariables
+  , StandaloneDeriving
 #-}
 
 -- | The core module for @ditto@. 
@@ -20,6 +21,7 @@ module Ditto.Core (
   -- | The interface to a given web framework
     Environment(..)
   , NoEnvironment(..)
+  , WithEnvironment(..)
   , noEnvironment
   -- * Form types
   -- | The representation of formlets
@@ -75,6 +77,19 @@ instance Monad m => Environment (NoEnvironment input m) input where
 
 noEnvironment :: Applicative m => FormId -> m (Value input)
 noEnvironment = const (pure Default)
+
+newtype WithEnvironment input m a = WithEnvironment { getWithEnvironment :: ReaderT (FormId -> m (Value input)) m a }
+  deriving (Monad, Functor, Applicative)
+
+deriving instance Monad m => MonadReader (FormId -> m (Value input)) (WithEnvironment input m)
+
+instance MonadTrans (WithEnvironment input) where
+  lift = WithEnvironment . lift
+
+instance Monad m => Environment (WithEnvironment input m) input where
+  environment fid = do
+    f <- ask
+    lift $ f fid
 
 ------------------------------------------------------------------------------
 -- Form types
