@@ -113,7 +113,12 @@ inputList formSId fromInput viewCat failVal initialValue createForm =
         (View viewF, _) <- formFormlet $ createForm failVal
         pure
           ( View $ const $ viewF []
-          , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
+          , pure $
+            Ok ( Proved
+                  { pos = unitRange i
+                  , unProved = []
+                  }
+               )
           )
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.

@@ -38,6 +38,7 @@ module Ditto.Core (
   , incrementFormId
   , isInRange
   , mapFormMonad
+  , mapResult
   , mapView
   , mkOk
   , retainChildErrors
@@ -436,6 +437,17 @@ catchFormErrorM form@(Form{formDecodeInput, formInitialValue}) e = Form formDeco
   case res0 of
     Ok _ -> formFormlet form
     Error err -> formFormlet $ e $ map snd err
+
+-- | Map over the @Result@ and @View@ of a form
+mapResult :: (Monad m)
+  => (Result err (Proved a) -> Result err (Proved a))
+  -> (View err view -> View err view)
+  -> Form m input err view a
+  -> Form m input err view a
+mapResult fres fview Form{formDecodeInput, formInitialValue, formFormlet} = Form formDecodeInput formInitialValue $ do
+  (view', mres) <- formFormlet
+  res <- lift mres
+  pure (fview view', pure $ fres res)
 
 -- | Run the form with no environment, return only the html.
 -- This means that the values will always be their defaults
