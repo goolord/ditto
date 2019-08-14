@@ -40,7 +40,7 @@ input name = G.input (getNamedFormId name)
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
 inputMaybe :: (Environment m input, FormError input err)
   => Text
-  -> (input -> m (Either err a))
+  -> (input -> Either err a)
   -> (FormId -> Maybe a -> view)
   -> Maybe a
   -> Form m input err view (Maybe a)
@@ -83,7 +83,7 @@ inputChoice name = G.inputChoice (getNamedFormId name)
 -- | this is necessary in order to basically map over the decoding function
 inputList :: forall m input err a view. (Monad m, FormError input err, Environment m input)
   => Text
-  -> (input -> Either err [a]) -- ^ decoding function for the list
+  -> (input -> m (Either err [a])) -- ^ decoding function for the list
   -> ([view] -> view) -- ^ how to concatenate views
   -> [a] -- ^ initial values
   -> view -- ^ view to generate in the fail case

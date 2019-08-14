@@ -2,6 +2,7 @@
     NamedFieldPuns
   , OverloadedStrings
   , ScopedTypeVariables
+  , LambdaCase
 #-}
 
 -- | This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
@@ -61,14 +62,14 @@ input formSId fromInput toView initialValue =
 -- | this is necessary in order to basically map over the decoding function
 inputList :: forall m input err a view. (Monad m, FormError input err, Environment m input)
   => FormState m FormId
-  -> (input -> Either err [a]) -- ^ decoding function for the list
+  -> (input -> m (Either err [a])) -- ^ decoding function for the list
   -> ([view] -> view) -- ^ how to concatenate views
   -> [a] -- ^ initial values
   -> view -- ^ view to generate in the fail case
   -> (a -> Form m input err view a)
   -> Form m input err view [a]
 inputList formSId fromInput viewCat initialValue defView createForm =
-  Form (pure . fromInput) (pure initialValue) $ do
+  Form fromInput (pure initialValue) $ do
     i <- formSId
     v <- getFormInput' i
     case v of
@@ -89,7 +90,7 @@ inputList formSId fromInput viewCat initialValue defView createForm =
                 }
               )
           )
-      Found inp -> case fromInput inp of
+      Found inp -> lift (fromInput inp) >>= \case
         Right xs -> do
           viewFs <- for xs $ \x -> do
             (View viewF, _) <- formFormlet $ createForm x 
@@ -123,12 +124,12 @@ inputList formSId fromInput viewCat initialValue defView createForm =
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
 inputMaybe :: (Monad m, FormError input err, Environment m input)
   => FormState m FormId
-  -> (input -> m (Either err a))
+  -> (input -> Either err a)
   -> (FormId -> Maybe a -> view)
   -> Maybe a
   -> Form m input err view (Maybe a)
 inputMaybe i' fromInput toView initialValue =
-  Form ((fmap . fmap) Just . fromInput) (pure initialValue) $ do
+  Form (pure . fmap Just . fromInput) (pure initialValue) $ do
     i <- i'
     v <- getFormInput' i
     case v of
@@ -142,23 +143,21 @@ inputMaybe i' fromInput toView initialValue =
                 }
               )
           )
-      Found x' -> do 
-        x <- lift $ fromInput x'
-        case x of
-          Right a -> pure
-            ( View $ const $ toView i (Just a)
-            , pure $
-              Ok
-                ( Proved
-                  { pos = unitRange i
-                  , unProved = (Just a)
-                  }
-                )
-            )
-          Left err -> pure
-            ( View $ const $ toView i initialValue
-            , pure $ Error [(unitRange i, err)]
-            )
+      Found x -> case fromInput x of
+        Right a -> pure
+          ( View $ const $ toView i (Just a)
+          , pure $
+            Ok
+              ( Proved
+                { pos = unitRange i
+                , unProved = (Just a)
+                }
+              )
+          )
+        Left err -> pure
+          ( View $ const $ toView i initialValue
+          , pure $ Error [(unitRange i, err)]
+          )
       Missing -> pure
         ( View $ const $ toView i initialValue
         , pure $
