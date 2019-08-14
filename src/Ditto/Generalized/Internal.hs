@@ -60,20 +60,20 @@ input formSId fromInput toView initialValue =
 -- | this is necessary in order to basically map over the decoding function
 inputList :: forall m input err a view. (Monad m, FormError input err, Environment m input)
   => FormState m FormId
-  -> (input -> Either err [a])
-  -> ([view] -> view)
-  -> a
-  -> [a]
+  -> (input -> Either err [a]) -- ^ decoding function for the list
+  -> ([view] -> view) -- ^ how to concatenate views
+  -> [a] -- ^ initial values
+  -> view -- ^ view to generate in the fail case
   -> (a -> Form m input err view a)
   -> Form m input err view [a]
-inputList formSId fromInput viewCat failVal initialValue createForm =
+inputList formSId fromInput viewCat initialValue defView createForm =
   Form (pure . fromInput) (pure initialValue) $ do
     i <- formSId
     v <- getFormInput' i
     case v of
       Default -> do
         let ivs' = case initialValue of
-              [] -> [failVal]
+              [] -> []
               _ -> initialValue
         viewFs <- for ivs' $ \x -> do
           (View viewF, _) <- formFormlet $ createForm x 
@@ -104,15 +104,13 @@ inputList formSId fromInput viewCat failVal initialValue createForm =
                 )
             )
         Left err -> do
-          (View viewF, _) <- formFormlet $ createForm failVal
           pure
-            ( View $ const $ viewF []
+            ( View $ const defView
             , pure $ Error [(unitRange i, err)]
             )
       Missing -> do 
-        (View viewF, _) <- formFormlet $ createForm failVal
         pure
-          ( View $ const $ viewF []
+          ( View $ const defView
           , pure $
             Ok ( Proved
                   { pos = unitRange i
@@ -194,7 +192,7 @@ inputFile :: forall m input err view. (Monad m, FormInput input, FormError input
   -> (FormId -> view)
   -> Form m input err view (FileType input)
 inputFile i' toView =
-  Form (pure . getInputFile') undefined $ do
+  Form (pure . getInputFile') undefined $ do -- FIXME
     i <- i'
     v <- getFormInput' i
     case v of

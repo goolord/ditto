@@ -15,6 +15,7 @@ module Ditto.Generalized.Unnamed
   , inputFile
   , inputMulti
   , inputChoice
+  , inputList
   , label
   , errors
   , childErrors
@@ -72,6 +73,16 @@ inputChoice :: forall a m err input lbl view. (FormError input err, FormInput in
   -> (FormId -> [G.Choice lbl a] -> view) -- ^ function which generates the view
   -> Form m input err view a
 inputChoice = G.inputChoice getFormId
+
+-- | this is necessary in order to basically map over the decoding function
+inputList :: forall m input err a view. (Monad m, FormError input err, Environment m input)
+  => (input -> Either err [a]) -- ^ decoding function for the list
+  -> ([view] -> view) -- ^ how to concatenate views
+  -> [a] -- ^ initial values
+  -> view -- ^ view to generate in the fail case
+  -> (a -> Form m input err view a)
+  -> Form m input err view [a]
+inputList = G.inputList getFormId
 
 -- | used to create @\<label\>@ elements
 label :: Environment m input
