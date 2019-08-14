@@ -38,7 +38,7 @@ input = G.input getFormId
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
 inputMaybe :: (Environment m input, FormError input err)
-  => (input -> Either err a)
+  => (input -> m (Either err a))
   -> (FormId -> Maybe a -> view)
   -> Maybe a
   -> Form m input err view (Maybe a)

@@ -9,6 +9,7 @@
 module Ditto.Generalized.Internal where
 
 import Control.Monad.State.Class (get)
+import Control.Monad.Trans (lift)
 import Data.List (find)
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Traversable (for)
@@ -122,12 +123,12 @@ inputList formSId fromInput viewCat initialValue defView createForm =
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
 inputMaybe :: (Monad m, FormError input err, Environment m input)
   => FormState m FormId
-  -> (input -> Either err a)
+  -> (input -> m (Either err a))
   -> (FormId -> Maybe a -> view)
   -> Maybe a
   -> Form m input err view (Maybe a)
 inputMaybe i' fromInput toView initialValue =
-  Form (pure . fmap Just . fromInput) (pure initialValue) $ do
+  Form ((fmap . fmap) Just . fromInput) (pure initialValue) $ do
     i <- i'
     v <- getFormInput' i
     case v of
@@ -141,21 +142,23 @@ inputMaybe i' fromInput toView initialValue =
                 }
               )
           )
-      Found x -> case fromInput x of
-        Right a -> pure
-          ( View $ const $ toView i (Just a)
-          , pure $
-            Ok
-              ( Proved
-                { pos = unitRange i
-                , unProved = (Just a)
-                }
-              )
-          )
-        Left err -> pure
-          ( View $ const $ toView i initialValue
-          , pure $ Error [(unitRange i, err)]
-          )
+      Found x' -> do 
+        x <- lift $ fromInput x'
+        case x of
+          Right a -> pure
+            ( View $ const $ toView i (Just a)
+            , pure $
+              Ok
+                ( Proved
+                  { pos = unitRange i
+                  , unProved = (Just a)
+                  }
+                )
+            )
+          Left err -> pure
+            ( View $ const $ toView i initialValue
+            , pure $ Error [(unitRange i, err)]
+            )
       Missing -> pure
         ( View $ const $ toView i initialValue
         , pure $
