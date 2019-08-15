@@ -60,14 +60,14 @@ input formSId fromInput toView initialValue =
         )
 
 -- | this is necessary in order to basically map over the decoding function
-inputList :: forall m input err a view. (Monad m, FormError input err, Environment m input)
+inputList :: forall m input err a view view'. (Monad m, FormError input err, Environment m input)
   => FormState m FormId
   -> (input -> m (Either err [a])) -- ^ decoding function for the list
-  -> ([view] -> view) -- ^ how to concatenate views
+  -> ([view] -> view') -- ^ how to concatenate views
   -> [a] -- ^ initial values
-  -> view -- ^ view to generate in the fail case
+  -> view' -- ^ view to generate in the fail case
   -> (a -> Form m input err view a)
-  -> Form m input err view [a]
+  -> Form m input err view' [a]
 inputList formSId fromInput viewCat initialValue defView createForm =
   Form fromInput (pure initialValue) $ do
     i <- formSId
