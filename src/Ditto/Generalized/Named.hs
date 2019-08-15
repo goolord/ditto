@@ -19,6 +19,8 @@ module Ditto.Generalized.Named
   , errors
   , childErrors
   , withErrors
+  , ireq
+  , iopt
   ) where
 
 import Ditto.Backend
@@ -120,4 +122,73 @@ withErrors :: Environment m input
   -> Form m input err view a
   -> Form m input err view a
 withErrors = G.withErrors
+
+ireq :: forall m input view err a. (Monoid view, Environment m input, FormError input err)
+  => Text 
+  -> (input -> Either err a)
+  -> a
+  -> Form m input err view a
+ireq name fromInput initialValue = Form (pure . fromInput) (pure initialValue) $ do
+  i <- getNamedFormId name
+  v <- getFormInput' i
+  case v of
+    Default -> pure
+      ( mempty
+      , pure $ Ok ( Proved
+          { pos = unitRange i
+          , unProved = initialValue
+          } )
+      )
+    Found inp -> case fromInput inp of
+      Right a -> pure
+        ( mempty
+        , pure $ Ok ( Proved
+            { pos = unitRange i
+            , unProved = a
+            } )
+        )
+      Left err -> pure
+        ( mempty
+        , pure $ Error [(unitRange i, err)]
+        )
+    Missing -> pure
+      ( mempty
+      , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
+      )
+
+iopt :: forall m input view err a. (Monoid view, Environment m input, FormError input err)
+  => Text 
+  -> (input -> Either err a)
+  -> Maybe a
+  -> Form m input err view (Maybe a)
+iopt name fromInput initialValue = Form (pure . fmap Just . fromInput) (pure initialValue) $ do
+  i <- getNamedFormId name
+  v <- getFormInput' i
+  case v of
+    Default -> pure
+      ( mempty
+      , pure $ Ok ( Proved
+          { pos = unitRange i
+          , unProved = initialValue
+          } )
+      )
+    Found inp -> case fromInput inp of
+      Right a -> pure
+        ( mempty
+        , pure $ Ok ( Proved
+            { pos = unitRange i
+            , unProved = Just a
+            } )
+        )
+      Left err -> pure
+        ( mempty
+        , pure $ Error [(unitRange i, err)]
+        )
+    Missing -> pure
+      ( mempty
+      , pure $ Ok ( Proved
+          { pos = unitRange i
+          , unProved = Nothing
+          } )
+      )
 
