@@ -22,6 +22,7 @@ module Ditto.Types (
   , Result(..)
   ) where
 
+import Control.Applicative (Alternative(..))
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.String (IsString(..))
 import Data.Text (Text)
@@ -85,6 +86,20 @@ data Value a
   | Missing
   | Found a
   deriving (Eq, Show, Functor, Traversable, Foldable)
+
+instance Applicative Value where
+  pure = Found
+  (Found f) <*> (Found x) = Found (f x)
+  Default <*> _ = Default
+  Missing <*> _ = Missing
+  Found{} <*> Default = Default
+  Found{} <*> Missing = Default
+
+instance Alternative Value where
+  empty = Missing
+  x@Found{} <|> _ = x
+  Default <|> _ = Default
+  Missing <|> x = x
 
 instance Semigroup a => Semigroup (Value a) where
   Missing <> Missing = Missing
