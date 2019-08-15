@@ -117,6 +117,18 @@ data Result e ok
   | Ok ok
   deriving (Show, Eq, Functor, Foldable, Traversable)
 
+instance Monad (Result e) where
+  return = Ok
+  Error x >>= _ = Error x
+  Ok x >>= f = f x
+
+instance Applicative (Result e) where
+  pure = Ok
+  Error x <*> Error y = Error $ x ++ y
+  Error x <*> Ok _ = Error x
+  Ok _ <*> Error y = Error y
+  Ok x <*> Ok y = Ok $ x y
+
 -- | Proved records a value, the location that value came from, and something that was proved about the value.
 data Proved a = Proved
   { pos :: FormRange
