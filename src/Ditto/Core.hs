@@ -274,11 +274,11 @@ getFormId = do
 getFormRange :: Monad m => FormState m FormRange
 getFormRange = get
 
--- | Get a @FormIdCustom@ from the FormState
+-- | Get a @FormIdName@ from the FormState
 getNamedFormId :: Monad m => Text -> FormState m FormId
 getNamedFormId name = do
   FormRange x _ <- get
-  pure $ FormIdCustom name $ formIdentifier x
+  pure $ FormIdName name $ formIdentifier x
 
 -- | Turns a @FormId@ into a @FormRange@ by incrementing the base for the end Id
 unitRange :: FormId -> FormRange

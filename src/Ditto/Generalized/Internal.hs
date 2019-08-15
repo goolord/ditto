@@ -77,11 +77,11 @@ inputList formSId fromInput viewCat initialValue defView createForm =
         let ivs' = case initialValue of
               [] -> []
               _ -> initialValue
-        viewFs <- for ivs' $ \x -> do
+        views <- for ivs' $ \x -> do
           (View viewF, _) <- formFormlet $ createForm x 
-          pure viewF
+          pure $ viewF []
         pure
-          ( View $ const $ viewCat $ fmap ($ []) viewFs
+          ( View $ const $ viewCat views
           , pure $
             Ok
               ( Proved
@@ -92,11 +92,11 @@ inputList formSId fromInput viewCat initialValue defView createForm =
           )
       Found inp -> lift (fromInput inp) >>= \case
         Right xs -> do
-          viewFs <- for xs $ \x -> do
+          views <- for xs $ \x -> do
             (View viewF, _) <- formFormlet $ createForm x 
-            pure viewF
+            pure $ viewF []
           pure
-            ( View $ const $ viewCat $ fmap ($ []) viewFs
+            ( View $ const $ viewCat views
             , pure $
               Ok
                 ( Proved
@@ -106,9 +106,13 @@ inputList formSId fromInput viewCat initialValue defView createForm =
                 )
             )
         Left err -> do
+          let err' = [(unitRange i, err)]
+          views <- for initialValue $ \x -> do
+            (View viewF, _) <- formFormlet $ createForm x 
+            pure $ viewF err'
           pure
-            ( View $ const defView
-            , pure $ Error [(unitRange i, err)]
+            ( View $ const $ viewCat views
+            , pure $ Error err'
             )
       Missing -> do 
         pure

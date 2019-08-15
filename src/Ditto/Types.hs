@@ -22,7 +22,8 @@ module Ditto.Types (
   , Result(..)
   ) where
 
-import Data.List.NonEmpty (NonEmpty (..))
+import Data.List.NonEmpty (NonEmpty(..))
+import Data.String (IsString(..))
 import Data.Text (Text)
 import Torsor
 import qualified Data.Text as T
@@ -36,26 +37,29 @@ data FormId
   = FormId
       {-# UNPACK #-} !Text           -- ^ Global prefix for the form
       {-# UNPACK #-} !(NonEmpty Int) -- ^ Stack indicating field. Head is most specific to this item
-  | FormIdCustom 
+  | FormIdName 
       {-# UNPACK #-} !Text -- ^ Local name of the input
       {-# UNPACK #-} !Int  -- ^ Index of the input
   deriving (Eq, Ord, Show)
+
+instance IsString FormId where
+  fromString x = FormIdName (T.pack x) 0
 
 -- | Encoding a @FormId@: use this instead of @show@ for
 -- the name of the input / query string parameter
 encodeFormId :: FormId -> Text
 encodeFormId (FormId p xs) =
   p <> "-val-" <> (T.intercalate "." $ foldr (\a as -> T.pack (show a) : as) [] xs)
-encodeFormId (FormIdCustom x _) = x
+encodeFormId (FormIdName x _) = x
 
 -- | get the head 'Int' from a 'FormId'
 formIdentifier :: FormId -> Int
 formIdentifier (FormId _ (x :| _)) = x
-formIdentifier (FormIdCustom _ x) = x
+formIdentifier (FormIdName _ x) = x
 
 instance Torsor FormId Int where
   add i (FormId p (x :| xs)) = FormId p $ (x + i) :| xs
-  add i (FormIdCustom n x) = FormIdCustom n $ x + i 
+  add i (FormIdName n x) = FormIdName n $ x + i 
   difference a b = formIdentifier a - formIdentifier b
 
 -- | A range of ID's to specify a group of forms
