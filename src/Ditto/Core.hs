@@ -51,6 +51,7 @@ module Ditto.Core (
   , unitRange
   , view
   , viewForm
+  , pureRes
   ) where
 
 import Control.Applicative
@@ -168,7 +169,7 @@ instance Functor m => Bifunctor (Form m input err) where
   second = fmap
 
 errorInitialValue :: String
-errorInitialValue = "ditto: Ditto.Core.errorInitalValue was evaluated"
+errorInitialValue = "ditto: Ditto.Core.errorInitialValue was evaluated"
 
 instance (Monad m, Monoid view, FormError input err, Environment m input) => Alternative (Form m input err view) where
   empty = Form 
@@ -463,3 +464,20 @@ viewForm prefix form = do
   (v, _) <- getNoEnvironment $ runForm prefix $ mapFormMonad NoEnvironment form
   pure (unView v [])
 
+pureRes :: (Monad m, Monoid view, FormError input err)
+  => Result err a
+  -> a
+  -> Form m input err view a
+pureRes x' def = case x' of
+  Ok x -> Form (successDecode x) (pure x) $ do
+    i <- getFormId
+    pure  ( mempty
+          , Ok $ Proved
+              { pos = FormRange i i
+              , unProved = x
+              }
+          )
+  Error e -> Form (successDecode def) (pure def) $ do
+    pure  ( mempty
+          , Error e
+          )
