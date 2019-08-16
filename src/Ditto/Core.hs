@@ -8,6 +8,12 @@
   , RankNTypes
   , ScopedTypeVariables
   , StandaloneDeriving
+  , TypeFamilies
+  , LiberalTypeSynonyms
+  , TypeSynonymInstances
+  , UndecidableInstances
+  , DataKinds
+  , KindSignatures
 #-}
 
 -- | The core module for @ditto@. 
@@ -52,6 +58,7 @@ module Ditto.Core (
   , view
   , viewForm
   , pureRes
+  , liftForm
   ) where
 
 import Control.Applicative
@@ -482,3 +489,10 @@ pureRes def x' = case x' of
     pure ( mempty
          , Error [(FormRange i i, e)]
          )
+
+liftForm :: (Monad m, Monoid view) => m a -> Form m input err view a
+liftForm x = Form (const (fmap Right x)) x $ do
+  res <- lift x
+  i <- getFormId
+  pure (mempty, Ok $ Proved (FormRange i i) res)
+
