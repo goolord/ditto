@@ -71,7 +71,7 @@ type FormState m = StateT FormRange m
 data Form m input err view a = Form 
   { formDecodeInput :: input -> m (Either err a)
   , formInitialValue :: m a
-  , formFormlet :: FormState m (View err view, m (Result err (Proved a)))
+  , formFormlet :: FormState m (View err view, Result err (Proved a))
   } deriving (Functor)
 
 instance (Monad m, Monoid view) => Applicative (Form m input err view) where
@@ -79,7 +79,7 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
   pure x = Form (successDecode x) (pure x) $ do
     i <- getFormId
     pure  ( mempty
-          , pure $ Ok $ Proved
+          , Ok $ Proved
               { pos = FormRange i i
               , unProved = x
               }
@@ -93,22 +93,20 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
         pure (f <*> x) ) 
       (ivF <*> ivA) 
       ( do
-        ((view1, mfok), (view2, maok)) <-
+        ((view1, fok), (view2, aok)) <-
           bracketState $ do
             res1 <- frmF
             incrementFormRange
             res2 <- frmA
             pure (res1, res2)
-        fok <- lift mfok
-        aok <- lift maok
         case (fok, aok) of
-          (Error errs1, Error errs2) -> pure (view1 <> view2, pure $ Error $ errs1 ++ errs2)
-          (Error errs1, _) -> pure (view1 <> view2, pure $ Error errs1)
-          (_, Error errs2) -> pure (view1 <> view2, pure $ Error errs2)
+          (Error errs1, Error errs2) -> pure (view1 <> view2, Error $ errs1 ++ errs2)
+          (Error errs1, _) -> pure (view1 <> view2, Error errs1)
+          (_, Error errs2) -> pure (view1 <> view2, Error errs2)
           (Ok (Proved (FormRange x _) f), Ok (Proved (FormRange _ y) a)) ->
             pure
               ( view1 <> view2
-              , pure $ Ok $ Proved
+              , Ok $ Proved
                 { pos = FormRange x y
                 , unProved = f a
                 }
@@ -129,9 +127,7 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
 
 instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
   form >>= f =
-    let mres = do 
-        (~_, mr) <- runForm "" form 
-        mr
+    let mres = fmap snd $ runForm "" form 
     in Form
       (\input -> do
         res <- mres
@@ -150,13 +146,12 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
           Ok (Proved _ x) -> formInitialValue (f x)
       )
       (do
-        (View viewF0, mres0) <- formFormlet form
-        res0 <- lift mres0
+        (View viewF0, res0) <- formFormlet form
         case res0 of
           Error errs -> do 
             iv <- lift $ formInitialValue form
             (View viewF, _) <- formFormlet $ f iv
-            pure (View $ const $ viewF0 errs <> viewF [], pure $ Error errs)
+            pure (View $ const $ viewF0 errs <> viewF [], Error errs)
           Ok (Proved _ x) -> fmap (first (\(View v) -> View $ \e -> viewF0 [] <> v e)) $ formFormlet (f x)
       )
   return = pure
@@ -179,7 +174,7 @@ instance (Monad m, Monoid view, FormError input err, Environment m input) => Alt
   empty = Form 
     failDecodeMDF
     (error errorInitialValue)
-    (pure (mempty, pure $ Error []))
+    (pure (mempty, Error []))
   formA <|> formB = do
     efA <- formEither formA
     case efA of
@@ -302,7 +297,7 @@ incrementFormRange = do
 runForm :: Monad m 
   => Text
   -> Form m input err view a
-  -> m (View err view, m (Result err (Proved a)))
+  -> m (View err view, Result err (Proved a))
 runForm prefix Form{formFormlet} =
   evalStateT formFormlet (unitRange (FormId prefix (pure 0)))
 
@@ -312,8 +307,7 @@ runForm_ :: (Monad m)
   -> Form m input err view a
   -> m (view , Maybe a)
 runForm_ prefix form = do 
-  (view', mresult) <- runForm prefix form
-  result <- mresult
+  (view', result) <- runForm prefix form
   pure $ case result of
     Error e -> (unView view' e , Nothing)
     Ok x -> (unView view' [], Just (unProved x))
@@ -331,8 +325,7 @@ eitherForm :: (Monad m)
   -> Form m input err view a -- ^ Form to run
   -> m (Either view a) -- ^ Result
 eitherForm id' form = do
-  (view', mresult) <- runForm id' form
-  result <- mresult
+  (view', result) <- runForm id' form
   return $ case result of
     Error e -> Left $ unView view' e
     Ok x -> Right (unProved x)
@@ -348,10 +341,10 @@ mkOk
   => FormId
   -> view
   -> a
-  -> FormState m (View err view, m (Result err (Proved a)))
+  -> FormState m (View err view, Result err (Proved a))
 mkOk i view' val = pure
   ( View $ const $ view'
-  , pure $ Ok ( Proved
+  , Ok ( Proved
       { pos = unitRange i
       , unProved = val
       } )
@@ -371,14 +364,13 @@ formEither Form{formDecodeInput, formInitialValue, formFormlet} = Form
   (fmap Right formInitialValue) 
   ( do
     range <- get
-    (view', mres) <- formFormlet
-    res' <- lift mres
+    (view', res') <- formFormlet
     let res = case res' of
           Error err -> Left (map snd err)
           Ok (Proved _ x) -> Right x
     pure  
       ( view'
-      , pure $ Ok $ Proved 
+      , Ok $ Proved 
           { pos = range
           , unProved = res
           }
@@ -407,7 +399,7 @@ view :: Monad m => view -> Form m input err view ()
 view html = Form (successDecode ()) (pure ()) $ do
   i <- getFormId
   pure  ( View (const html)
-        , pure $ Ok $ Proved
+        , Ok $ Proved
             { pos = FormRange i i
             , unProved = ()
             }
@@ -422,8 +414,8 @@ mapFormMonad f Form{formDecodeInput, formInitialValue, formFormlet} = Form
   { formDecodeInput = f . formDecodeInput
   , formInitialValue = f formInitialValue
   , formFormlet = do
-      (view', mres) <- fstate formFormlet
-      pure $ (view', f mres)
+      (view', res) <- fstate formFormlet
+      pure $ (view', res)
   }
   where
   fstate st = StateT $ f . runStateT st
@@ -435,8 +427,7 @@ catchFormError :: (Monad m)
   -> Form m input err view a
 catchFormError ferr Form{formDecodeInput, formInitialValue, formFormlet} = Form formDecodeInput formInitialValue $ do
   i <- getFormId
-  (View viewf, mres) <- formFormlet
-  res <- lift mres
+  (View viewf, res) <- formFormlet
   case res of
     Ok _ -> formFormlet
     Error err -> mkOk i (viewf []) (ferr $ fmap snd err)
@@ -447,8 +438,7 @@ catchFormErrorM :: (Monad m)
   -> ([err] -> Form m input err view a)
   -> Form m input err view a
 catchFormErrorM form@(Form{formDecodeInput, formInitialValue}) e = Form formDecodeInput formInitialValue $ do
-  (_, mres0) <- formFormlet form
-  res0 <- lift mres0
+  (_, res0) <- formFormlet form
   case res0 of
     Ok _ -> formFormlet form
     Error err -> formFormlet $ e $ map snd err
@@ -460,9 +450,8 @@ mapResult :: (Monad m)
   -> Form m input err view a
   -> Form m input err view a
 mapResult fres fview Form{formDecodeInput, formInitialValue, formFormlet} = Form formDecodeInput formInitialValue $ do
-  (view', mres) <- formFormlet
-  res <- lift mres
-  pure (fview view', pure $ fres res)
+  (view', res) <- formFormlet
+  pure (fview view', fres res)
 
 -- | Run the form with no environment, return only the html.
 -- This means that the values will always be their defaults

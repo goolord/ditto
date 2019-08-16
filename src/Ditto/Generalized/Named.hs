@@ -134,7 +134,7 @@ ireq name fromInput initialValue = Form (pure . fromInput) (pure initialValue) $
   case v of
     Default -> pure
       ( mempty
-      , pure $ Ok ( Proved
+      , Ok ( Proved
           { pos = unitRange i
           , unProved = initialValue
           } )
@@ -142,18 +142,18 @@ ireq name fromInput initialValue = Form (pure . fromInput) (pure initialValue) $
     Found inp -> case fromInput inp of
       Right a -> pure
         ( mempty
-        , pure $ Ok ( Proved
+        , Ok ( Proved
             { pos = unitRange i
             , unProved = a
             } )
         )
       Left err -> pure
         ( mempty
-        , pure $ Error [(unitRange i, err)]
+        , Error [(unitRange i, err)]
         )
     Missing -> pure
       ( mempty
-      , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
+      , Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
       )
 
 iopt :: forall m input view err a. (Monoid view, Environment m input, FormError input err)
@@ -167,7 +167,7 @@ iopt name fromInput initialValue = Form (pure . fmap Just . fromInput) (pure ini
   case v of
     Default -> pure
       ( mempty
-      , pure $ Ok ( Proved
+      , Ok ( Proved
           { pos = unitRange i
           , unProved = initialValue
           } )
@@ -175,18 +175,18 @@ iopt name fromInput initialValue = Form (pure . fmap Just . fromInput) (pure ini
     Found inp -> case fromInput inp of
       Right a -> pure
         ( mempty
-        , pure $ Ok ( Proved
+        , Ok ( Proved
             { pos = unitRange i
             , unProved = Just a
             } )
         )
       Left err -> pure
         ( mempty
-        , pure $ Error [(unitRange i, err)]
+        , Error [(unitRange i, err)]
         )
     Missing -> pure
       ( mempty
-      , pure $ Ok ( Proved
+      , Ok ( Proved
           { pos = unitRange i
           , unProved = Nothing
           } )

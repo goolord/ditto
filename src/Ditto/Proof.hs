@@ -57,17 +57,16 @@ prove (Form{formDecodeInput, formInitialValue, formFormlet}) (Proof f ivB) = For
   (fmap ivB formInitialValue)
   ( do
     (html, a) <- formFormlet
-    a' <- lift a
+    res <- lift $ case a of
+      Error xs -> pure $ Error xs
+      Ok (Proved pos x) -> do
+        eeb <- f x
+        case eeb of
+          Left err -> pure $ Error [(pos, err)]
+          Right res -> pure $ Ok (Proved pos res)
     pure
       ( html
-      , do
-        case a' of
-          Error xs -> pure $ Error xs
-          Ok (Proved pos x) -> do
-            eeb <- f x
-            case eeb of
-              Left err -> pure $ Error [(pos, err)]
-              Right res -> pure $ Ok (Proved pos res)
+      , res
       )
   )
 

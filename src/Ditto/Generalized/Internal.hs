@@ -32,31 +32,26 @@ input formSId fromInput toView initialValue =
     case v of
       Default -> pure
         ( View $ const $ toView i initialValue
-        , pure $ Ok
-            ( Proved
-              { pos = unitRange i
-              , unProved = initialValue
-              }
-            )
+        , Ok ( Proved
+            { pos = unitRange i
+            , unProved = initialValue
+            })
         )
       Found inp -> case fromInput inp of
         Right a -> pure
           ( View $ const $ toView i a
-          , pure $
-            Ok
-              ( Proved
-                { pos = unitRange i
-                , unProved = a
-                }
-              )
+          , Ok ( Proved
+              { pos = unitRange i
+              , unProved = a
+              })
           )
         Left err -> pure
           ( View $ const $ toView i initialValue
-          , pure $ Error [(unitRange i, err)]
+          , Error [(unitRange i, err)]
           )
       Missing -> pure
         ( View $ const $ toView i initialValue
-        , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
+        , Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
         )
 
 -- | this is necessary in order to basically map over the decoding function
@@ -82,8 +77,7 @@ inputList formSId fromInput viewCat initialValue defView createForm =
           pure $ viewF []
         pure
           ( View $ const $ viewCat views
-          , pure $
-            Ok
+          , Ok
               ( Proved
                 { pos = unitRange i
                 , unProved = ivs'
@@ -97,8 +91,7 @@ inputList formSId fromInput viewCat initialValue defView createForm =
             pure $ viewF []
           pure
             ( View $ const $ viewCat views
-            , pure $
-              Ok
+            , Ok
                 ( Proved
                   { pos = unitRange i
                   , unProved = xs
@@ -112,13 +105,12 @@ inputList formSId fromInput viewCat initialValue defView createForm =
             pure $ viewF err'
           pure
             ( View $ const $ viewCat views
-            , pure $ Error err'
+            , Error err'
             )
       Missing -> do 
         pure
           ( View $ const defView
-          , pure $
-            Ok ( Proved
+          , Ok ( Proved
                   { pos = unitRange i
                   , unProved = []
                   }
@@ -139,8 +131,7 @@ inputMaybe i' fromInput toView initialValue =
     case v of
       Default -> pure
           ( View $ const $ toView i initialValue
-          , pure $
-            Ok
+          , Ok
               ( Proved
                 { pos = unitRange i
                 , unProved = initialValue
@@ -150,8 +141,7 @@ inputMaybe i' fromInput toView initialValue =
       Found x -> case fromInput x of
         Right a -> pure
           ( View $ const $ toView i (Just a)
-          , pure $
-            Ok
+          , Ok
               ( Proved
                 { pos = unitRange i
                 , unProved = (Just a)
@@ -160,12 +150,11 @@ inputMaybe i' fromInput toView initialValue =
           )
         Left err -> pure
           ( View $ const $ toView i initialValue
-          , pure $ Error [(unitRange i, err)]
+          , Error [(unitRange i, err)]
           )
       Missing -> pure
         ( View $ const $ toView i initialValue
-        , pure $
-          Ok
+        , Ok
             ( Proved
               { pos = unitRange i
               , unProved = Nothing
@@ -183,8 +172,7 @@ inputNoData i' toView =
     i <- i'
     pure
       ( View $ const $ toView i
-      , pure $
-        Ok
+      , Ok
           ( Proved
             { pos = unitRange i
             , unProved = ()
@@ -205,13 +193,12 @@ inputFile i' toView =
       Default ->
         pure
           ( View $ const $ toView i
-          , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
+          , Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
           )
       Found x -> case getInputFile' x of
         Right a -> pure
           ( View $ const $ toView i
-          , pure $
-            Ok
+          , Ok
               ( Proved
                 { pos = unitRange i
                 , unProved = a
@@ -220,12 +207,12 @@ inputFile i' toView =
           )
         Left err -> pure
           ( View $ const $ toView i
-          , pure $ Error [(unitRange i, err)]
+          , Error [(unitRange i, err)]
           )
       Missing ->
         pure
           ( View $ const $ toView i
-          , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) ::err)]
+          , Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) ::err)]
           )
   where
     -- just here for the type-signature to make the type-checker happy
@@ -326,7 +313,7 @@ inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView = do
             view' <- mkView i <$> augmentChoices choices'
             pure
               ( View $ const view'
-              , pure $ Error [(unitRange i, err)]
+              , Error [(unitRange i, err)]
               )
           Right key -> do
             let (choices', mval) =
@@ -342,7 +329,7 @@ inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView = do
             case mval of
               Nothing -> pure
                 ( View $ const view'
-                , pure $ Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
+                , Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
                 )
               Just val -> mkOk i view' val
   where
@@ -350,7 +337,7 @@ inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView = do
     mkOk' i view' Nothing =
       pure
         ( View $ const $ view'
-        , pure $ Error [(unitRange i, commonFormError (MissingDefaultValue :: CommonFormError input) :: err)]
+        , Error [(unitRange i, commonFormError (MissingDefaultValue :: CommonFormError input) :: err)]
         )
     markSelected :: Foldable f => f (a, lbl) -> ([(a, lbl, Bool)], Maybe a)
     markSelected cs =
@@ -378,8 +365,7 @@ label i' f = Form (successDecode ()) (pure ()) $ do
   id' <- i'
   pure
     ( View (const $ f id')
-    , pure
-      ( Ok $ Proved
+    , ( Ok $ Proved
         { pos = unitRange id'
         , unProved = ()
         }
@@ -398,8 +384,7 @@ errors f = Form (successDecode ()) (pure ()) $ do
   range <- get
   pure
     ( View (f . retainErrors range)
-    , pure
-      ( Ok $ Proved
+    , ( Ok $ Proved
         { pos = range
         , unProved = ()
         }
@@ -414,8 +399,7 @@ childErrors f = Form (successDecode ()) (pure ()) $ do
   range <- get
   pure
     ( View (f . retainChildErrors range)
-    , pure
-      ( Ok $ Proved
+    , ( Ok $ Proved
         { pos = range
         , unProved = ()
         }
