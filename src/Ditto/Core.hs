@@ -465,11 +465,11 @@ viewForm prefix form = do
   pure (unView v [])
 
 pureRes :: (Monad m, Monoid view, FormError input err)
-  => Result err a
-  -> a
+  => a
+  -> Either err a
   -> Form m input err view a
-pureRes x' def = case x' of
-  Ok x -> Form (successDecode x) (pure x) $ do
+pureRes def x' = case x' of
+  Right x -> Form (successDecode x) (pure x) $ do
     i <- getFormId
     pure  ( mempty
           , Ok $ Proved
@@ -477,7 +477,8 @@ pureRes x' def = case x' of
               , unProved = x
               }
           )
-  Error e -> Form (successDecode def) (pure def) $ do
-    pure  ( mempty
-          , Error e
-          )
+  Left e -> Form (successDecode def) (pure def) $ do
+    i <- getFormId
+    pure ( mempty
+         , Error [(FormRange i i, e)]
+         )
