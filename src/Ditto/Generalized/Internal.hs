@@ -3,6 +3,7 @@
   , OverloadedStrings
   , ScopedTypeVariables
   , LambdaCase
+  , TypeFamilies
 #-}
 
 -- | This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
@@ -32,18 +33,18 @@ input formSId fromInput toView initialValue =
     case v of
       Default -> pure
         ( View $ const $ toView i initialValue
-        , Ok ( Proved
+        , Ok $ Proved
             { pos = unitRange i
             , unProved = initialValue
-            })
+            }
         )
       Found inp -> case fromInput inp of
         Right a -> pure
           ( View $ const $ toView i a
-          , Ok ( Proved
+          , Ok $ Proved
               { pos = unitRange i
               , unProved = a
-              })
+              }
           )
         Left err -> pure
           ( View $ const $ toView i initialValue
@@ -77,12 +78,10 @@ inputList formSId fromInput viewCat initialValue defView createForm =
           pure $ viewF []
         pure
           ( View $ const $ viewCat views
-          , Ok
-              ( Proved
-                { pos = unitRange i
-                , unProved = ivs'
-                }
-              )
+          , Ok $ Proved
+              { pos = unitRange i
+              , unProved = ivs'
+              }
           )
       Found inp -> lift (fromInput inp) >>= \case
         Right xs -> do
@@ -91,12 +90,10 @@ inputList formSId fromInput viewCat initialValue defView createForm =
             pure $ viewF []
           pure
             ( View $ const $ viewCat views
-            , Ok
-                ( Proved
-                  { pos = unitRange i
-                  , unProved = xs
-                  }
-                )
+            , Ok $ Proved
+                { pos = unitRange i
+                , unProved = xs
+                }
             )
         Left err -> do
           let err' = [(unitRange i, err)]
@@ -110,11 +107,10 @@ inputList formSId fromInput viewCat initialValue defView createForm =
       Missing -> do 
         pure
           ( View $ const defView
-          , Ok ( Proved
-                  { pos = unitRange i
-                  , unProved = []
-                  }
-               )
+          , Ok $ Proved
+              { pos = unitRange i
+              , unProved = []
+              }
           )
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
@@ -131,22 +127,18 @@ inputMaybe i' fromInput toView initialValue =
     case v of
       Default -> pure
           ( View $ const $ toView i initialValue
-          , Ok
-              ( Proved
-                { pos = unitRange i
-                , unProved = initialValue
-                }
-              )
+          , Ok ( Proved
+              { pos = unitRange i
+              , unProved = initialValue
+              })
           )
       Found x -> case fromInput x of
         Right a -> pure
           ( View $ const $ toView i (Just a)
-          , Ok
-              ( Proved
-                { pos = unitRange i
-                , unProved = (Just a)
-                }
-              )
+          , Ok $ Proved
+              { pos = unitRange i
+              , unProved = (Just a)
+              }
           )
         Left err -> pure
           ( View $ const $ toView i initialValue
@@ -154,12 +146,10 @@ inputMaybe i' fromInput toView initialValue =
           )
       Missing -> pure
         ( View $ const $ toView i initialValue
-        , Ok
-            ( Proved
-              { pos = unitRange i
-              , unProved = Nothing
-              }
-            )
+        , Ok $ Proved
+            { pos = unitRange i
+            , unProved = Nothing
+            }
         )
 
 -- | used for elements like @\<input type=\"reset\"\>@ which take a value, but are never present in the form data set.
@@ -172,21 +162,19 @@ inputNoData i' toView =
     i <- i'
     pure
       ( View $ const $ toView i
-      , Ok
-          ( Proved
-            { pos = unitRange i
-            , unProved = ()
-            }
-          )
+      , Ok ( Proved
+          { pos = unitRange i
+          , unProved = ()
+          })
       )
 
 -- | used for @\<input type=\"file\"\>@
-inputFile :: forall m input err view. (Monad m, FormInput input, FormError input err, Environment m input)
+inputFile :: forall m ft input err view. (Monad m, FormInput input, FormError input err, Environment m input, ft ~ FileType input, Monoid ft)
   => FormState m FormId
   -> (FormId -> view)
   -> Form m input err view (FileType input)
 inputFile i' toView =
-  Form (pure . getInputFile') undefined $ do -- FIXME
+  Form (pure . getInputFile') (pure mempty) $ do -- FIXME
     i <- i'
     v <- getFormInput' i
     case v of
@@ -198,12 +186,10 @@ inputFile i' toView =
       Found x -> case getInputFile' x of
         Right a -> pure
           ( View $ const $ toView i
-          , Ok
-              ( Proved
-                { pos = unitRange i
-                , unProved = a
-                }
-              )
+          , Ok ( Proved
+              { pos = unitRange i
+              , unProved = a
+              })
           )
         Left err -> pure
           ( View $ const $ toView i
@@ -232,19 +218,18 @@ inputMulti i' choices fromInput mkView isSelected =
     i <- i'
     inp <- getFormInput' i
     case inp of
-      Default ->
-        do
-          let (choices', vals) =
-                foldr
-                  ( \(a, lbl) (cs, vs) ->
-                    if isSelected a
-                    then ((a, lbl, True) : cs, a : vs)
-                    else ((a, lbl, False) : cs, vs)
-                  )
-                  ([], [])
-                  choices
-          view' <- mkView i <$> augmentChoices choices'
-          mkOk i view' vals
+      Default -> do
+        let (choices', vals) =
+              foldr
+                ( \(a, lbl) (cs, vs) ->
+                  if isSelected a
+                  then ((a, lbl, True) : cs, a : vs)
+                  else ((a, lbl, False) : cs, vs)
+                )
+                ([], [])
+                choices
+        view' <- mkView i <$> augmentChoices choices'
+        mkOk i view' vals
       Missing -> do
         -- just means that no checkboxes were checked
         view' <- mkView i <$> augmentChoices (map (\(x, y) -> (x, y, False)) choices)
@@ -406,7 +391,7 @@ childErrors f = Form (successDecode ()) (pure ()) $ do
       )
     )
 
--- | modify the view of a form based on its errors
+-- | modify the view of a form based on its child errors
 withErrors :: Monad m
   => (view -> [err] -> view)
   -> Form m input err view a
@@ -418,5 +403,17 @@ withErrors f Form{formDecodeInput, formInitialValue, formFormlet} = Form formDec
     ( View $ \x ->
         let errs = retainChildErrors range x
         in f (v x) errs
+    , r
+    )
+
+-- | modify the view of a form based on each of its errors
+withAllErrors :: Monad m
+  => (view -> [err] -> view)
+  -> Form m input err view a
+  -> Form m input err view a
+withAllErrors f Form{formDecodeInput, formInitialValue, formFormlet} = Form formDecodeInput formInitialValue $ do
+  (View v, r) <- formFormlet
+  pure
+    ( View $ \x -> f (v x) $ fmap snd x
     , r
     )

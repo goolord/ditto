@@ -1,5 +1,6 @@
 {-# LANGUAGE 
     ScopedTypeVariables
+  , TypeFamilies
 #-}
 
 -- | This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
@@ -56,7 +57,7 @@ inputNoData :: (Environment m input)
 inputNoData name = G.inputNoData (getNamedFormId name)
 
 -- | used for @\<input type=\"file\"\>@
-inputFile :: forall m input err view. (Environment m input, FormInput input, FormError input err)
+inputFile :: forall m input err view ft. (Environment m input, FormInput input, FormError input err, ft ~ FileType input, Monoid ft)
   => Text
   -> (FormId -> view)
   -> Form m input err view (FileType input)
