@@ -21,7 +21,7 @@ module Ditto.Generalized.Unnamed
   , errors
   , childErrors
   , withErrors
-  , withAllErrors
+  , G.withAllErrors
   ) where
 
 import Data.List.NonEmpty (NonEmpty(..))
@@ -115,14 +115,3 @@ withErrors :: Environment m input
   -> Form m input err view a
 withErrors = G.withErrors
 
--- | modify the view of a form based on each of its errors
-withAllErrors :: Monad m
-  => (view -> [err] -> view)
-  -> Form m input err view a
-  -> Form m input err view a
-withAllErrors f Form{formDecodeInput, formInitialValue, formFormlet} = Form formDecodeInput formInitialValue $ do
-  (View v, r) <- formFormlet
-  pure
-    ( View $ \x -> f (v x) $ fmap snd x
-    , r
-    )
