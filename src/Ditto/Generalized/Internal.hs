@@ -255,11 +255,12 @@ inputMulti i' choices fromInput mkView isSelected =
       i <- i'
       pure $ Choice i lbl selected a
 
+-- | a choice for inputChoice
 data Choice lbl a = Choice
-  { choiceFormId :: FormId
-  , choiceLabel :: lbl
-  , choiceIsSelected :: Bool
-  , choiceVal :: a
+  { choiceFormId :: FormId -- ^ the formId
+  , choiceLabel :: lbl -- ^ <label>
+  , choiceIsSelected :: Bool -- ^ is the choice selected
+  , choiceVal :: a -- ^ the haskell value of the choice
   }
 
 -- | radio buttons, single @\<select\>@ boxes

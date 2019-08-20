@@ -74,12 +74,14 @@ import Torsor
 -- Form types
 ------------------------------------------------------------------------------
 
+-- | The Form's state is just the range of identifiers so far
 type FormState m = StateT FormRange m
 
+-- | @ditto@'s representation of a formlet
 data Form m input err view a = Form 
-  { formDecodeInput :: input -> m (Either err a)
-  , formInitialValue :: m a
-  , formFormlet :: FormState m (View err view, Result err (Proved a))
+  { formDecodeInput :: input -> m (Either err a) -- ^ Decode the value from the input
+  , formInitialValue :: m a -- ^ The initial value
+  , formFormlet :: FormState m (View err view, Result err (Proved a)) -- ^ A @FormState@ which produced a @View@ and a @Result@
   } deriving (Functor)
 
 instance (Monad m, Monoid view) => Applicative (Form m input err view) where
@@ -193,18 +195,22 @@ instance (Monad m, Monoid view, FormError input err, Environment m input) => Alt
 -- Environment
 ------------------------------------------------------------------------------
 
+-- | The environment typeclass: the interface between ditto and a given framework
 class Monad m => Environment m input | m -> input where
   environment :: FormId -> m (Value input)
 
+-- | Run the form, but always return the initial value
 newtype NoEnvironment input m a = NoEnvironment { getNoEnvironment ::  m a }
   deriving (Monad, Functor, Applicative)
 
 instance Monad m => Environment (NoEnvironment input m) input where
   environment = noEnvironment
 
+-- | @environment@ which will always return the initial value
 noEnvironment :: Applicative m => FormId -> m (Value input)
 noEnvironment = const (pure Default)
 
+-- | Run the form, but with a given @environment@ function
 newtype WithEnvironment input m a = WithEnvironment { getWithEnvironment :: ReaderT (FormId -> m (Value input)) m a }
   deriving (Monad, Functor, Applicative)
 
@@ -230,6 +236,7 @@ failDecodeMDF = const $ pure $ Left err
   err :: err
   err = commonFormError mdf
 
+-- | Always succeed decoding
 successDecode :: Applicative m => a -> (input -> m (Either err a))
 successDecode = const . pure . Right
 
@@ -471,6 +478,7 @@ viewForm prefix form = do
   (v, _) <- getNoEnvironment $ runForm prefix $ mapFormMonad NoEnvironment form
   pure (unView v [])
 
+-- | lift the result of a decoding to a @Form@
 pureRes :: (Monad m, Monoid view, FormError input err)
   => a
   -> Either err a
@@ -490,6 +498,7 @@ pureRes def x' = case x' of
          , Error [(FormRange i i, e)]
          )
 
+-- | @Form@ is a @MonadTrans@, but we can't have an instance of it because of the order and kind of its type variables
 liftForm :: (Monad m, Monoid view) => m a -> Form m input err view a
 liftForm x = Form (const (fmap Right x)) x $ do
   res <- lift x

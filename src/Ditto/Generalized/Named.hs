@@ -125,6 +125,7 @@ withErrors :: Environment m input
   -> Form m input err view a
 withErrors = G.withErrors
 
+-- | a @Form@ with no @view@
 ireq :: forall m input view err a. (Monoid view, Environment m input, FormError input err)
   => Text 
   -> (input -> Either err a)
@@ -158,6 +159,7 @@ ireq name fromInput initialValue = Form (pure . fromInput) (pure initialValue) $
       , Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
       )
 
+-- | an optional @Form@ with no @view@
 iopt :: forall m input view err a. (Monoid view, Environment m input, FormError input err)
   => Text 
   -> (input -> Either err a)

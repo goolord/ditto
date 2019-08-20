@@ -1,3 +1,4 @@
+-- | Reexports important modules of @ditto@
 module Ditto 
   ( module P
   ) where
