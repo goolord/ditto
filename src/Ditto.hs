@@ -1,12 +1,9 @@
-module Ditto
-    ( module Ditto.Backend
-    , module Ditto.Core
-    , module Ditto.Result
-    , module Ditto.Proof
-    )
-    where
+-- | Reexports important modules of @ditto@
+module Ditto 
+  ( module P
+  ) where
 
-import Ditto.Backend
-import Ditto.Core
-import Ditto.Result
-import Ditto.Proof
+import Ditto.Backend as P
+import Ditto.Core as P
+import Ditto.Proof as P
+import Ditto.Types as P

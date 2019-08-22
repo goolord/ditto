@@ -1,7 +1,9 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE 
+    MultiParamTypeClasses
+  , TypeFamilies
+  , OverloadedStrings
+  , FunctionalDependencies
+#-}
 
 {- |
 This module contains two classes. 'FormInput' is a class which is parameterized over the @input@ type used to represent form data in different web frameworks. There should be one instance for each framework, such as Happstack, Snap, WAI, etc.
@@ -12,7 +14,7 @@ The 'FormError' class is used to map error messages into an application specific
 module Ditto.Backend where
 
 import Data.Text (Text)
-import Ditto.Result (FormId)
+import Ditto.Types (FormId, encodeFormId)
 import qualified Data.Text as T
 
 -- | an error type used to represent errors that are common to all backends
@@ -35,7 +37,7 @@ commonFormErrorStr
   -> CommonFormError input -- ^ a 'CommonFormError'
   -> String
 commonFormErrorStr showInput cfe = case cfe of
-  InputMissing formId -> "Input field missing for " ++ show formId
+  InputMissing formId -> "Input field missing for " ++ (T.unpack . encodeFormId) formId
   NoStringFound input -> "Could not extract a string value from: " ++ showInput input
   NoFileFound input -> "Could not find a file associated with: " ++ showInput input
   MultiFilesFound input -> "Found multiple files associated with: " ++ showInput input
@@ -48,7 +50,7 @@ commonFormErrorText
   -> CommonFormError input -- ^ a 'CommonFormError'
   -> Text
 commonFormErrorText showInput cfe = case cfe of
-  InputMissing formId -> "Input field missing for " <> (T.pack $ show formId)
+  InputMissing formId -> "Input field missing for " <> encodeFormId formId
   NoStringFound input -> "Could not extract a string value from: " <> showInput input
   NoFileFound input -> "Could not find a file associated with: " <> showInput input
   MultiFilesFound input -> "Found multiple files associated with: " <> showInput input
@@ -80,9 +82,8 @@ class FormInput input where
       [s] -> Right s
       _ -> Left (commonFormError $ MultiStringsFound input)
 
-  -- | Should be implemented
-  --
   getInputStrings :: input -> [String]
+  getInputStrings = map T.unpack . getInputTexts
 
   -- | Parse the input value into 'Text'
   --
@@ -93,11 +94,10 @@ class FormInput input where
       [s] -> Right s
       _ -> Left (commonFormError $ MultiStringsFound input)
 
-  -- | Can be overriden for efficiency concerns
-  --
   getInputTexts :: input -> [Text]
   getInputTexts = map T.pack . getInputStrings
 
   -- | Get a file descriptor for an uploaded file
   --
   getInputFile :: (FormError input err) => input -> Either err (FileType input)
+
