@@ -81,7 +81,7 @@ type FormState m = StateT FormRange m
 data Form m input err view a = Form 
   { formDecodeInput :: input -> m (Either err a) -- ^ Decode the value from the input
   , formInitialValue :: m a -- ^ The initial value
-  , formFormlet :: FormState m (View err view, Result err (Proved a)) -- ^ A @FormState@ which produced a @View@ and a @Result@
+  , formFormlet :: FormState m (View err view, Result err (Proved a)) -- ^ A @FormState@ which produces a @View@ and a @Result@
   } deriving (Functor)
 
 instance (Monad m, Monoid view) => Applicative (Form m input err view) where
