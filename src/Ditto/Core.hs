@@ -161,7 +161,7 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
           Error errs -> do 
             iv <- lift $ formInitialValue form
             (View viewF, _) <- formFormlet $ f iv
-            pure (View $ const $ viewF0 errs <> viewF [], Error errs)
+            pure (View $ \es -> viewF0 errs <> viewF es, Error errs)
           Ok (Proved _ x) -> fmap (first (\(View v) -> View $ \e -> viewF0 [] <> v e)) $ formFormlet (f x)
       )
   return = pure
@@ -347,7 +347,7 @@ eitherForm id' form = do
 
 -- | infix mapView: succinctly mix the @view@ dsl and the formlets dsl  @foo \@$ do ..@
 infixr 0 @$
-(@$) :: Monad m => (view -> view) -> Form m input err view a -> Form m input err view a
+(@$) :: Monad m => (view -> view') -> Form m input err view a -> Form m input err view' a
 (@$) = mapView
 
 -- | Utility Function: turn a view and pure value into a successful 'FormState'
