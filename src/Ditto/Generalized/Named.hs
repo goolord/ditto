@@ -20,7 +20,7 @@ module Ditto.Generalized.Named
   , errors
   , childErrors
   , withErrors
-  , G.withAllErrors
+  , G.withChildErrors
   , ireq
   , iopt
   ) where

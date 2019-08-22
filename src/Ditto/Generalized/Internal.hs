@@ -393,11 +393,11 @@ childErrors f = Form (successDecode ()) (pure ()) $ do
     )
 
 -- | modify the view of a form based on its child errors
-withErrors :: Monad m
+withChildErrors :: Monad m
   => (view -> [err] -> view)
   -> Form m input err view a
   -> Form m input err view a
-withErrors f Form{formDecodeInput, formInitialValue, formFormlet} = Form formDecodeInput formInitialValue $ do
+withChildErrors f Form{formDecodeInput, formInitialValue, formFormlet} = Form formDecodeInput formInitialValue $ do
   (View v, r) <- formFormlet
   range <- get
   pure
@@ -407,14 +407,17 @@ withErrors f Form{formDecodeInput, formInitialValue, formFormlet} = Form formDec
     , r
     )
 
--- | modify the view of a form based on each of its errors
-withAllErrors :: Monad m
+-- | modify the view of a form based on its errors
+withErrors :: Monad m
   => (view -> [err] -> view)
   -> Form m input err view a
   -> Form m input err view a
-withAllErrors f Form{formDecodeInput, formInitialValue, formFormlet} = Form formDecodeInput formInitialValue $ do
+withErrors f Form{formDecodeInput, formInitialValue, formFormlet} = Form formDecodeInput formInitialValue $ do
   (View v, r) <- formFormlet
+  range <- get
   pure
-    ( View $ \x -> f (v x) $ fmap snd x
+    ( View $ \x ->
+        let errs = retainErrors range x
+        in f (v x) errs
     , r
     )

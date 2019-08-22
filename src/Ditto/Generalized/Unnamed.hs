@@ -21,7 +21,7 @@ module Ditto.Generalized.Unnamed
   , errors
   , childErrors
   , withErrors
-  , G.withAllErrors
+  , G.withChildErrors
   ) where
 
 import Data.List.NonEmpty (NonEmpty(..))
