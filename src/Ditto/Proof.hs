@@ -1,12 +1,7 @@
 {-# LANGUAGE 
-    DeriveFoldable
-  , DeriveFunctor
-  , DeriveTraversable
-  , GeneralizedNewtypeDeriving
-  , MultiParamTypeClasses 
+    DeriveFunctor
   , NamedFieldPuns
   , ScopedTypeVariables
-  , StandaloneDeriving
 #-}
 
 {- |
