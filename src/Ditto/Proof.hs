@@ -39,7 +39,7 @@ import Numeric (readDec, readFloat, readSigned)
 data Proof m err a b = Proof
   { proofFunction :: a -> m (Either err b) -- ^ function which provides the proof
   , proofNewInitialValue :: a -> b
-  }
+  } deriving (Functor)
 
 -- | apply a 'Proof' to a 'Form'
 prove

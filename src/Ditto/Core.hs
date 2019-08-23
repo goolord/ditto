@@ -3,17 +3,16 @@
   , FlexibleInstances
   , FunctionalDependencies
   , GeneralizedNewtypeDeriving
+  , KindSignatures
+  , LiberalTypeSynonyms
   , NamedFieldPuns
   , OverloadedStrings
   , RankNTypes
   , ScopedTypeVariables
   , StandaloneDeriving
   , TypeFamilies
-  , LiberalTypeSynonyms
   , TypeSynonymInstances
   , UndecidableInstances
-  , DataKinds
-  , KindSignatures
 #-}
 
 -- | The core module for @ditto@. 
@@ -423,12 +422,14 @@ view html = Form (successDecode ()) (pure ()) $ do
             }
         )
 
--- | Change the underlying Monad of the form, usually a @lift@ or newtype
-mapFormMonad :: (Monad f)
+
+-- | Lift a monad morphism from @m@ to @n@ into a monad morphism from @(Form m)@ to @(Form n)@
+-- eg. @newtype@s, @lift@s
+hoistForm :: (Monad f) 
   => (forall x. m x -> f x)
   -> Form m input err view a
   -> Form f input err view a
-mapFormMonad f Form{formDecodeInput, formInitialValue, formFormlet} = Form 
+hoistForm f Form{formDecodeInput, formInitialValue, formFormlet} = Form 
   { formDecodeInput = f . formDecodeInput
   , formInitialValue = f formInitialValue
   , formFormlet = do
@@ -437,6 +438,13 @@ mapFormMonad f Form{formDecodeInput, formInitialValue, formFormlet} = Form
   }
   where
   fstate st = StateT $ f . runStateT st
+
+{-# DEPRECATED mapFormMonad "Use hoistForm instead" #-}
+mapFormMonad :: (Monad f) 
+  => (forall x. m x -> f x)
+  -> Form m input err view a
+  -> Form f input err view a
+mapFormMonad = hoistForm
 
 -- | Catch errors purely
 catchFormError :: (Monad m)
