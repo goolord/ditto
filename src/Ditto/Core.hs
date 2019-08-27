@@ -3,16 +3,11 @@
   , FlexibleInstances
   , FunctionalDependencies
   , GeneralizedNewtypeDeriving
-  , KindSignatures
-  , LiberalTypeSynonyms
   , NamedFieldPuns
   , OverloadedStrings
   , RankNTypes
   , ScopedTypeVariables
   , StandaloneDeriving
-  , TypeFamilies
-  , TypeSynonymInstances
-  , UndecidableInstances
 #-}
 
 -- | The core module for @ditto@. 
@@ -421,7 +416,6 @@ view html = Form (successDecode ()) (pure ()) $ do
             , unProved = ()
             }
         )
-
 
 -- | Lift a monad morphism from @m@ to @n@ into a monad morphism from @(Form m)@ to @(Form n)@
 -- eg. @newtype@s, @lift@s
