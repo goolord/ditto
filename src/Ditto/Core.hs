@@ -72,6 +72,8 @@ import Torsor
 type FormState m = StateT FormRange m
 
 -- | @ditto@'s representation of a formlet
+--
+-- It's reccommended to use @ApplicativeDo@ where possible when constructing forms
 data Form m input err view a = Form 
   { formDecodeInput :: input -> m (Either err a) -- ^ Decode the value from the input
   , formInitialValue :: m a -- ^ The initial value
