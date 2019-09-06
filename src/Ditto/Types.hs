@@ -6,6 +6,8 @@
   , GeneralizedNewtypeDeriving
   , MultiParamTypeClasses 
   , OverloadedStrings
+  , PatternSynonyms
+  , ExplicitForAll
 #-}
 
 -- | Types relevant to forms and their validation.
@@ -19,7 +21,7 @@ module Ditto.Types (
   , Value(..)
   , View(..)
   , Proved(..)
-  , Result(..)
+  , Result(.., Error, Ok)
   ) where
 
 import Control.Applicative (Alternative(..))
@@ -112,15 +114,14 @@ instance Semigroup a => Semigroup (Value a) where
 
 -- | Type for failing computations
 -- Similar to @Either@ but with an accumilating @Applicative@ instance
-data Result e ok
-  = Error [(FormRange, e)]
-  | Ok ok
-  deriving (Show, Eq, Functor, Foldable, Traversable)
+newtype Result e ok = Result { getResult :: Either [(FormRange, e)] ok }
+  deriving (Show, Eq, Functor, Foldable, Traversable, Monad)
 
-instance Monad (Result e) where
-  return = Ok
-  Error x >>= _ = Error x
-  Ok x >>= f = f x
+pattern Error :: forall e ok. [(FormRange, e)] -> Result e ok
+pattern Error e = Result (Left e)
+pattern Ok :: forall e ok. ok -> Result e ok
+pattern Ok ok = Result (Right ok)
+{-# COMPLETE Error, Ok #-}
 
 instance Applicative (Result e) where
   pure = Ok
@@ -134,3 +135,4 @@ data Proved a = Proved
   { pos :: FormRange
   , unProved :: a
   } deriving (Show, Functor, Foldable, Traversable)
+
