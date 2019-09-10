@@ -340,7 +340,7 @@ eitherForm :: (Monad m)
   -> m (Either view a) -- ^ Result
 eitherForm id' form = do
   (view', result) <- runForm id' form
-  return $ case result of
+  pure $ case result of
     Error e -> Left $ unView view' e
     Ok x -> Right (unProved x)
 
