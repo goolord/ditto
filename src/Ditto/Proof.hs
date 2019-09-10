@@ -42,7 +42,7 @@ prove
   => Form m input error view a
   -> Proof m error a b
   -> Form m input error view b
-prove (Form{formDecodeInput, formInitialValue, formFormlet}) (Proof f ivB) = Form 
+prove Form{formDecodeInput, formInitialValue, formFormlet} (Proof f ivB) = Form 
   (\input -> do 
     a <- formDecodeInput input
     case a of
@@ -74,7 +74,7 @@ transformEitherM
   -> (a -> m (Either error b))
   -> (a -> b)
   -> Form m input error view b
-transformEitherM frm func ivb = frm `prove` (Proof func ivb)
+transformEitherM frm func ivb = frm `prove` Proof func ivb
 
 -- | transform the 'Form' result using an 'Either' function.
 transformEither
@@ -93,8 +93,8 @@ notNullProof errorMsg = Proof (pure . check) id
   where
     check list =
       if null list
-      then (Left errorMsg)
-      else (Right list)
+      then Left errorMsg
+      else Right list
 
 -- | read an unsigned number in decimal notation
 decimal
@@ -106,8 +106,8 @@ decimal mkError i = Proof (pure . toDecimal) (const i)
   where
     toDecimal str =
       case readDec str of
-        [(d, [])] -> (Right d)
-        _ -> (Left $ mkError str)
+        [(d, [])] -> Right d
+        _ -> Left $ mkError str
 
 -- | read signed decimal number
 signedDecimal :: (Monad m, Eq i, Real i) 
@@ -117,9 +117,9 @@ signedDecimal :: (Monad m, Eq i, Real i)
 signedDecimal mkError i = Proof (pure . toDecimal) (const i)
   where
     toDecimal str =
-      case (readSigned readDec) str of
-        [(d, [])] -> (Right d)
-        _ -> (Left $ mkError str)
+      case readSigned readDec str of
+        [(d, [])] -> Right d
+        _ -> Left $ mkError str
 
 -- | read 'RealFrac' number
 realFrac :: (Monad m, RealFrac a) 
@@ -130,8 +130,8 @@ realFrac mkError a = Proof (pure . toRealFrac) (const a)
   where
     toRealFrac str =
       case readFloat str of
-        [(f, [])] -> (Right f)
-        _ -> (Left $ mkError str)
+        [(f, [])] -> Right f
+        _ -> Left $ mkError str
 
 -- | read a signed 'RealFrac' number
 realFracSigned :: (Monad m, RealFrac a) 
@@ -141,7 +141,7 @@ realFracSigned :: (Monad m, RealFrac a)
 realFracSigned mkError a = Proof (pure . toRealFrac) (const a)
   where
     toRealFrac str =
-      case (readSigned readFloat) str of
-        [(f, [])] -> (Right f)
-        _ -> (Left $ mkError str)
+      case readSigned readFloat str of
+        [(f, [])] -> Right f
+        _ -> Left $ mkError str
 
