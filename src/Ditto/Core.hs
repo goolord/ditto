@@ -133,7 +133,7 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
 
 instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
   form >>= f =
-    let mres = fmap snd $ runForm "" form 
+    let mres = snd <$> runForm "" form 
     in Form
       (\input -> do
         res <- mres
@@ -161,7 +161,9 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
                   Error es -> es
                   Ok {} -> []
             pure (View $ const $ viewF0 errs0 <> viewF errs, Error (errs0 <> errs))
-          Ok (Proved _ x) -> fmap (first (\(View v) -> View $ \e -> viewF0 [] <> v e)) $ formFormlet (f x)
+          Ok (Proved _ x) -> 
+                first (\(View v) -> View $ \e -> viewF0 [] <> v e) 
+            <$> formFormlet (f x)
       )
   return = pure
   (>>) = (*>) -- way more efficient than the default
@@ -357,7 +359,7 @@ mkOk
   -> a
   -> FormState m (View err view, Result err (Proved a))
 mkOk i view' val = pure
-  ( View $ const $ view'
+  ( View $ const view'
   , Ok ( Proved
       { pos = unitRange i
       , unProved = val
@@ -430,7 +432,7 @@ hoistForm f Form{formDecodeInput, formInitialValue, formFormlet} = Form
   , formInitialValue = f formInitialValue
   , formFormlet = do
       (view', res) <- fstate formFormlet
-      pure $ (view', res)
+      pure (view', res)
   }
   where
   fstate st = StateT $ f . runStateT st
@@ -459,7 +461,7 @@ catchFormErrorM :: (Monad m)
   => Form m input err view a
   -> ([err] -> Form m input err view a)
   -> Form m input err view a
-catchFormErrorM form@(Form{formDecodeInput, formInitialValue}) e = Form formDecodeInput formInitialValue $ do
+catchFormErrorM form@Form{formDecodeInput, formInitialValue} e = Form formDecodeInput formInitialValue $ do
   (_, res0) <- formFormlet form
   case res0 of
     Ok _ -> formFormlet form

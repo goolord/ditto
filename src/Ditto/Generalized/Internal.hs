@@ -104,7 +104,7 @@ inputList formSId fromInput viewCat initialValue defView createForm =
             ( View $ const $ viewCat views
             , Error err'
             )
-      Missing -> do 
+      Missing -> do
         pure
           ( View $ const defView
           , Ok $ Proved
@@ -137,7 +137,7 @@ inputMaybe i' fromInput toView initialValue =
           ( View $ const $ toView i (Just a)
           , Ok $ Proved
               { pos = unitRange i
-              , unProved = (Just a)
+              , unProved = Just a
               }
           )
         Left err -> pure
@@ -228,11 +228,11 @@ inputMulti i' choices fromInput mkView isSelected =
                 )
                 ([], [])
                 choices
-        view' <- mkView i <$> augmentChoices choices'
+        view' <- mkView i <$> augmentChoices i choices'
         mkOk i view' vals
       Missing -> do
         -- just means that no checkboxes were checked
-        view' <- mkView i <$> augmentChoices (map (\(x, y) -> (x, y, False)) choices)
+        view' <- mkView i <$> augmentChoices i (map (\(x, y) -> (x, y, False)) choices)
         mkOk i view' []
       Found v -> do
         let keys = either (const []) id $ fromInput v
@@ -243,17 +243,16 @@ inputMulti i' choices fromInput mkView isSelected =
                   then ((a, lbl, True) : c, a : v0)
                   else ((a, lbl, False) : c, v0)
                 )
-                ([], []) $
+                ([], [])
                 choices
-        view' <- mkView i <$> augmentChoices choices'
+        view' <- mkView i <$> augmentChoices i choices'
         mkOk i view' vals
-  where
-    augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m [Choice lbl a]
-    augmentChoices choices' = mapM augmentChoice choices'
-    augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m (Choice lbl a)
-    augmentChoice (a, lbl, selected) = do
-      i <- i'
-      pure $ Choice i lbl selected a
+
+augmentChoices :: (Monad m) => FormId ->  [(a, lbl, Bool)] -> FormState m [Choice lbl a]
+augmentChoices i choices' = mapM (augmentChoice i) choices'
+augmentChoice :: (Monad m) => FormId -> (a, lbl, Bool) -> FormState m (Choice lbl a)
+augmentChoice i (a, lbl, selected) = do
+  pure $ Choice i lbl selected a
 
 -- | a choice for inputChoice
 data Choice lbl a = Choice
@@ -281,12 +280,12 @@ inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView = do
     case inp of
       Default -> do
         let (choices', def) = markSelected choices
-        view' <- mkView i <$> augmentChoices choices'
+        view' <- mkView i <$> augmentChoices i choices'
         mkOk' i view' def
       Missing -> do
         -- can happen if no choices where checked
         let (choices', def) = markSelected choices
-        view' <- mkView i <$> augmentChoices choices'
+        view' <- mkView i <$> augmentChoices i choices'
         mkOk' i view' def
       Found v -> do
         case fromInput v of
@@ -296,7 +295,7 @@ inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView = do
                     ( \(a, lbl) c -> (a, lbl, False) : c )
                     []
                     choices
-            view' <- mkView i <$> augmentChoices choices'
+            view' <- mkView i <$> augmentChoices i choices'
             pure
               ( View $ const view'
               , Error [(unitRange i, err)]
@@ -309,9 +308,9 @@ inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView = do
                       then ((a, lbl, True) : c, Just a)
                       else ((a, lbl, False) : c, v0)
                     )
-                    ([], Nothing) $
+                    ([], Nothing)
                     choices
-            view' <- mkView i <$> augmentChoices choices'
+            view' <- mkView i <$> augmentChoices i choices'
             case mval of
               Nothing -> pure
                 ( View $ const view'
@@ -322,7 +321,7 @@ inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView = do
     mkOk' i view' (Just val) = mkOk i view' val
     mkOk' i view' Nothing =
       pure
-        ( View $ const $ view'
+        ( View $ const view'
         , Error [(unitRange i, commonFormError (MissingDefaultValue :: CommonFormError input) :: err)]
         )
     markSelected :: Foldable f => f (a, lbl) -> ([(a, lbl, Bool)], Maybe a)
@@ -335,12 +334,6 @@ inputChoice i' isDefault choices@(headChoice :| _) fromInput mkView = do
         )
         ([], Nothing)
         cs
-    augmentChoices :: (Monad m) => [(a, lbl, Bool)] -> FormState m [Choice lbl a]
-    augmentChoices choices' = mapM augmentChoice choices'
-    augmentChoice :: (Monad m) => (a, lbl, Bool) -> FormState m (Choice lbl a)
-    augmentChoice (a, lbl, selected) = do
-      i <- i'
-      pure $ Choice i lbl selected a
 
 -- | used to create @\<label\>@ elements
 label :: Monad m
@@ -351,11 +344,10 @@ label i' f = Form (successDecode ()) (pure ()) $ do
   id' <- i'
   pure
     ( View (const $ f id')
-    , ( Ok $ Proved
+    , Ok $ Proved
         { pos = unitRange id'
         , unProved = ()
         }
-      )
     )
 
 -- | used to add a list of err messages to a 'Form'
@@ -370,11 +362,10 @@ errors f = Form (successDecode ()) (pure ()) $ do
   range <- get
   pure
     ( View (f . retainErrors range)
-    , ( Ok $ Proved
+    , Ok $ Proved
         { pos = range
         , unProved = ()
         }
-      )
     )
 
 -- | similar to 'errors' but includes err messages from children of the form as well.
@@ -385,11 +376,10 @@ childErrors f = Form (successDecode ()) (pure ()) $ do
   range <- get
   pure
     ( View (f . retainChildErrors range)
-    , ( Ok $ Proved
+    , Ok $ Proved
         { pos = range
         , unProved = ()
         }
-      )
     )
 
 -- | modify the view of a form based on its child errors
