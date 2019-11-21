@@ -28,7 +28,6 @@ import Control.Applicative (Alternative(..))
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.String (IsString(..))
 import Data.Text (Text)
-import Torsor
 import qualified Data.Text as T
 
 ------------------------------------------------------------------------------
@@ -59,11 +58,6 @@ encodeFormId (FormIdName x _) = x
 formIdentifier :: FormId -> Int
 formIdentifier (FormId _ (x :| _)) = x
 formIdentifier (FormIdName _ x) = x
-
-instance Torsor FormId Int where
-  add i (FormId p (x :| xs)) = FormId p $ (x + i) :| xs
-  add i (FormIdName n x) = FormIdName n $ x + i 
-  difference a b = formIdentifier a - formIdentifier b
 
 -- | A range of ID's to specify a group of forms
 data FormRange

@@ -59,10 +59,10 @@ import Control.Applicative
 import Control.Monad.Reader
 import Control.Monad.State.Lazy
 import Data.Bifunctor
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Text (Text)
-import Ditto.Types
 import Ditto.Backend
-import Torsor
+import Ditto.Types
 
 ------------------------------------------------------------------------------
 -- Form types
@@ -256,6 +256,10 @@ mapView f Form{formDecodeInput, formInitialValue, formFormlet} =
 -- | Increment a form ID
 incrementFormId :: FormId -> FormId
 incrementFormId fid = add 1 fid
+  where
+  add i (FormId p (x :| xs)) = FormId p $ (x + i) :| xs
+  add i (FormIdName n x) = FormIdName n $ x + i 
+
 
 -- | Check if a 'FormId' is contained in a 'FormRange'
 isInRange
@@ -293,7 +297,7 @@ getNamedFormId name = do
 
 -- | Turns a @FormId@ into a @FormRange@ by incrementing the base for the end Id
 unitRange :: FormId -> FormRange
-unitRange i = FormRange i $ add 1 i
+unitRange i = FormRange i $ incrementFormId i
 
 bracketState :: Monad m => FormState m a -> FormState m a
 bracketState k = do

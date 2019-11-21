@@ -70,17 +70,14 @@ inputList formSId fromInput viewCat initialValue defView createForm =
     v <- getFormInput' i
     case v of
       Default -> do
-        let ivs' = case initialValue of
-              [] -> []
-              _ -> initialValue
-        views <- for ivs' $ \x -> do
+        views <- for initialValue $ \x -> do
           (View viewF, _) <- formFormlet $ createForm x 
           pure $ viewF []
         pure
           ( View $ const $ viewCat views
           , Ok $ Proved
               { pos = unitRange i
-              , unProved = ivs'
+              , unProved = initialValue
               }
           )
       Found inp -> lift (fromInput inp) >>= \case
