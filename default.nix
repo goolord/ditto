@@ -1,2 +1,2 @@
-{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc865" }:
-nixpkgs.pkgs.haskell.packages.${compiler}.callPackage ./cabal2nix.nix { }
+{ pkgs ? import <nixpkgs> {} }:
+pkgs.haskellPackages.callCabal2nix "ditto" ./. {}
