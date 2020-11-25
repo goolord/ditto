@@ -3,6 +3,7 @@
   , FlexibleInstances
   , FunctionalDependencies
   , GeneralizedNewtypeDeriving
+  , LambdaCase
   , NamedFieldPuns
   , OverloadedStrings
   , RankNTypes
@@ -71,6 +72,11 @@ import Ditto.Types
 -- | The Form's state is just the range of identifiers so far
 type FormState m = StateT FormRange m
 
+-- data Formlet err view a = Formlet
+--   { formletView :: !(View err view)
+--   , formletRes :: !(Result err (Proved a))
+--   }
+
 -- | @ditto@'s representation of a formlet
 --
 -- It's reccommended to use @ApplicativeDo@ where possible when constructing forms
@@ -136,8 +142,7 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
     let mres = snd <$> runForm "" form 
     in Form
       (\input -> do
-        res <- mres
-        case res of
+        mres >>= \case
           Error {} -> do
             iv <- formInitialValue form
             formDecodeInput (f iv) input
@@ -255,11 +260,10 @@ mapView f Form{formDecodeInput, formInitialValue, formFormlet} =
 
 -- | Increment a form ID
 incrementFormId :: FormId -> FormId
-incrementFormId fid = add 1 fid
+incrementFormId = add 1
   where
   add i (FormId p (x :| xs)) = FormId p $ (x + i) :| xs
   add i (FormIdName n x) = FormIdName n $ x + i 
-
 
 -- | Check if a 'FormId' is contained in a 'FormRange'
 isInRange
@@ -325,7 +329,7 @@ runForm prefix Form{formFormlet} =
 runForm_ :: (Monad m)
   => Text
   -> Form m input err view a
-  -> m (view , Maybe a)
+  -> m (view, Maybe a)
 runForm_ prefix form = do 
   (view', result) <- runForm prefix form
   pure $ case result of
@@ -517,4 +521,3 @@ liftForm x = Form (const (fmap Right x)) x $ do
   res <- lift x
   i <- getFormId
   pure (mempty, Ok $ Proved (FormRange i i) res)
-
