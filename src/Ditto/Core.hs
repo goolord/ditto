@@ -438,12 +438,8 @@ hoistForm :: (Monad f)
 hoistForm f Form{formDecodeInput, formInitialValue, formFormlet} = Form 
   { formDecodeInput = f . formDecodeInput
   , formInitialValue = f formInitialValue
-  , formFormlet = do
-      (view', res) <- fstate formFormlet
-      pure (view', res)
+  , formFormlet = mapStateT f formFormlet
   }
-  where
-  fstate st = StateT $ f . runStateT st
 
 {-# DEPRECATED mapFormMonad "Use hoistForm instead" #-}
 mapFormMonad :: (Monad f) 
