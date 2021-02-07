@@ -29,6 +29,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.String (IsString(..))
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified GHC.Exts as Exts
 
 ------------------------------------------------------------------------------
 -- FormId
@@ -51,7 +52,8 @@ instance IsString FormId where
 -- the name of the input / query string parameter
 encodeFormId :: FormId -> Text
 encodeFormId (FormId p xs) =
-  p <> "-val-" <> (T.intercalate "." $ foldr (\a as -> T.pack (show a) : as) [] xs)
+  let ids = fmap (T.pack . show) (Exts.toList xs)
+  in p <> "-val-" <> T.intercalate "." ids
 encodeFormId (FormIdName x _) = x
 
 -- | get the head 'Int' from a 'FormId'
