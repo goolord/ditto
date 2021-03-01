@@ -23,7 +23,6 @@ library
   ghc-options: -Wall
   exposed-modules: 
     Ditto
-    Ditto.Category
     Ditto.Core
     Ditto.Types
     Ditto.Backend
