@@ -29,7 +29,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.String (IsString(..))
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified GHC.Exts as Exts
+import qualified Data.List.NonEmpty as NE
 
 ------------------------------------------------------------------------------
 -- FormId
@@ -52,7 +52,7 @@ instance IsString FormId where
 -- the name of the input / query string parameter
 encodeFormId :: FormId -> Text
 encodeFormId (FormId p xs) =
-  let ids = fmap (T.pack . show) (Exts.toList xs)
+  let ids = fmap (T.pack . show) (NE.toList xs)
   in p <> "-val-" <> T.intercalate "." ids
 encodeFormId (FormIdName x _) = x
 

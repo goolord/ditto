@@ -1,20 +1,19 @@
-Name:          ditto
-Version:       0.4.1
-Synopsis:      ditto is a type-safe HTML form generation and validation library
-Description:   ditto follows in the footsteps of formlets and
+name:          ditto
+version:       0.4.1
+synopsis:      ditto is a type-safe HTML form generation and validation library
+description:   ditto follows in the footsteps of formlets and
                digestive-functors <= 0.2. It provides a
                type-safe and composable method for generating
                an HTML form that includes validation.
-License:       BSD3
-License-file:  LICENSE
-Author:        Jeremy Shaw, Jasper Van der Jeugt <m@jaspervdj.be>, Zachary Churchill <zacharyachurchill@gmail.com>
-Maintainer:    Zachary Churchill <zacharyachurchill@gmail.com>
-Copyright:     2012 Jeremy Shaw, Jasper Van der Jeugt, SeeReason Partners LLC,
+license:       BSD3
+license-file:  LICENSE
+author:        Jeremy Shaw, Jasper Van der Jeugt <m@jaspervdj.be>, Zachary Churchill <zacharyachurchill@gmail.com>
+maintainer:    Zachary Churchill <zacharyachurchill@gmail.com>
+copyright:     2012 Jeremy Shaw, Jasper Van der Jeugt, SeeReason Partners LLC,
                2019 Zachary Churchill
-Category:      Web
-Build-type:    Simple
-Cabal-version: >=1.6
-tested-with:   GHC == 7.6.3, GHC == 7.8.4, GHC == 7.10.3, GHC == 8.2.2, GHC == 8.4.1, GHC == 8.6.3
+category:      Web
+build-type:    Simple
+cabal-version: >=2.0
 
 source-repository head
     type:     git
@@ -24,6 +23,7 @@ library
   ghc-options: -Wall
   exposed-modules: 
     Ditto
+    Ditto.Category
     Ditto.Core
     Ditto.Types
     Ditto.Backend

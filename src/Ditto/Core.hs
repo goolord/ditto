@@ -40,7 +40,6 @@ module Ditto.Core (
   , getNamedFormId
   , incrementFormId
   , isInRange
-  , mapFormMonad
   , mapResult
   , mapView
   , mkOk
@@ -64,18 +63,12 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.Text (Text)
 import Ditto.Backend
 import Ditto.Types
-
 ------------------------------------------------------------------------------
 -- Form types
 ------------------------------------------------------------------------------
 
 -- | The Form's state is just the range of identifiers so far
 type FormState m = StateT FormRange m
-
--- data Formlet err view a = Formlet
---   { formletView :: !(View err view)
---   , formletRes :: !(Result err (Proved a))
---   }
 
 -- | @ditto@'s representation of a formlet
 --
@@ -88,14 +81,7 @@ data Form m input err view a = Form
 
 instance (Monad m, Monoid view) => Applicative (Form m input err view) where
 
-  pure x = Form (successDecode x) (pure x) $ do
-    i <- getFormId
-    pure  ( mempty
-          , Ok $ Proved
-              { pos = FormRange i i
-              , unProved = x
-              }
-          )
+  pure x = Form (successDecode x) (pure x) (pureFormState x)
 
   (Form df ivF frmF) <*> (Form da ivA frmA) =
     Form 
@@ -441,13 +427,6 @@ hoistForm f Form{formDecodeInput, formInitialValue, formFormlet} = Form
   , formFormlet = mapStateT f formFormlet
   }
 
-{-# DEPRECATED mapFormMonad "Use hoistForm instead" #-}
-mapFormMonad :: (Monad f) 
-  => (forall x. m x -> f x)
-  -> Form m input err view a
-  -> Form f input err view a
-mapFormMonad = hoistForm
-
 -- | Catch errors purely
 catchFormError :: (Monad m)
   => ([err] -> a)
@@ -488,7 +467,7 @@ viewForm :: (Monad m)
   -> Form m input err view a -- ^ form to view
   -> m view
 viewForm prefix form = do
-  (v, _) <- getNoEnvironment $ runForm prefix $ mapFormMonad NoEnvironment form
+  (v, _) <- getNoEnvironment $ runForm prefix $ hoistForm NoEnvironment form
   pure (unView v [])
 
 -- | lift the result of a decoding to a @Form@
@@ -513,7 +492,19 @@ pureRes def x' = case x' of
 
 -- | @Form@ is a @MonadTrans@, but we can't have an instance of it because of the order and kind of its type variables
 liftForm :: (Monad m, Monoid view) => m a -> Form m input err view a
-liftForm x = Form (const (fmap Right x)) x $ do
-  res <- lift x
+liftForm x = Form 
+  { formDecodeInput = const (fmap Right x)
+  , formInitialValue = x 
+  , formFormlet = lift x >>= pureFormState
+  }
+
+-- | lift a value to a @Form@'s formlet
+pureFormState :: (Monad m, Monoid view) => a -> FormState m (view, Result err (Proved a))
+pureFormState x = do
   i <- getFormId
-  pure (mempty, Ok $ Proved (FormRange i i) res)
+  pure  ( mempty
+        , Ok $ Proved
+            { pos = FormRange i i
+            , unProved = x
+            }
+        )

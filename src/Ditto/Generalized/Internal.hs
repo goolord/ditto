@@ -12,6 +12,7 @@ module Ditto.Generalized.Internal where
 
 import Control.Monad.State.Class (get)
 import Control.Monad.Trans (lift)
+import Data.Either
 import Data.List (find)
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Traversable (for)
@@ -232,7 +233,7 @@ inputMulti i' choices fromInput mkView isSelected =
         view' <- mkView i <$> augmentChoices i (map (\(x, y) -> (x, y, False)) choices)
         mkOk i view' []
       Found v -> do
-        let keys = either (const []) id $ fromInput v
+        let keys = fromRight [] $ fromInput v
             (choices', vals) =
               foldr
                 ( \(a, lbl) (c, v0) ->
