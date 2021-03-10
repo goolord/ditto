@@ -1,4 +1,4 @@
-{-# LANGUAGE 
+{-# LANGUAGE
     DeriveFunctor
   , FlexibleInstances
   , FunctionalDependencies
@@ -12,9 +12,9 @@
   , TypeApplications
 #-}
 
--- | The core module for @ditto@. 
+-- | The core module for @ditto@.
 --
--- This module provides the @Form@ type and helper functions 
+-- This module provides the @Form@ type and helper functions
 -- for constructing typesafe forms inside arbitrary "views" / web frameworks.
 -- @ditto@ is meant to be a generalized formlet library used to write
 -- formlet libraries specific to a web / gui framework
@@ -74,7 +74,7 @@ type FormState m = StateT FormRange m
 -- | @ditto@'s representation of a formlet
 --
 -- It's reccommended to use @ApplicativeDo@ where possible when constructing forms
-data Form m input err view a = Form 
+data Form m input err view a = Form
   { formDecodeInput :: input -> m (Either err a) -- ^ Decode the value from the input
   , formInitialValue :: m a -- ^ The initial value
   , formFormlet :: FormState m (View err view, Result err (Proved a)) -- ^ A @FormState@ which produces a @View@ and a @Result@
@@ -84,7 +84,7 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
 
   pure x = Form (successDecode x) (pure x) (pureFormState x)
 
-  (Form df ivF frmF) <*> (Form da ivA frmA) = Form 
+  (Form df ivF frmF) <*> (Form da ivA frmA) = Form
     { formDecodeInput = \inp -> liftA2 (<*>) (df inp) (da inp)
     , formInitialValue = ivF <*> ivA
     , formFormlet = do
@@ -123,7 +123,7 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
 
 instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
   form >>= f =
-    let mres = snd <$> runForm "" form 
+    let mres = snd <$> runForm "" form
     in Form
       { formDecodeInput = \input -> do
           mres >>= \case
@@ -131,7 +131,7 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
               iv <- formInitialValue form
               formDecodeInput (f iv) input
             Ok (Proved _ x) -> formDecodeInput (f x) input
-      , formInitialValue = do 
+      , formInitialValue = do
           res <- mres
           case res of
             Error {} -> do
@@ -141,15 +141,15 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
       , formFormlet = do
           (View viewF0, res0) <- formFormlet form
           case res0 of
-            Error errs0 -> do 
+            Error errs0 -> do
               iv <- lift $ formInitialValue form
               (View viewF, res) <- formFormlet $ f iv
               let errs = case res of
                     Error es -> es
                     Ok {} -> []
               pure (View $ const $ viewF0 errs0 <> viewF errs, Error (errs0 <> errs))
-            Ok (Proved _ x) -> 
-                  first (\(View v) -> View $ \e -> viewF0 [] <> v e) 
+            Ok (Proved _ x) ->
+                  first (\(View v) -> View $ \e -> viewF0 [] <> v e)
               <$> formFormlet (f x)
       }
   return = pure
@@ -169,7 +169,7 @@ errorInitialValue :: String
 errorInitialValue = "ditto: Ditto.Core.errorInitialValue was evaluated"
 
 instance (Monad m, Monoid view, FormError input err, Environment m input) => Alternative (Form m input err view) where
-  empty = Form 
+  empty = Form
     failDecodeMDF
     (error errorInitialValue)
     (pure (mempty, Error []))
@@ -232,7 +232,7 @@ mapView :: (Functor m)
   => (view -> view') -- ^ Manipulator
   -> Form m input err view a -- ^ Initial form
   -> Form m input err view' a -- ^ Resulting form
-mapView f Form{formDecodeInput, formInitialValue, formFormlet} = 
+mapView f Form{formDecodeInput, formInitialValue, formFormlet} =
   Form formDecodeInput formInitialValue (fmap (first (fmap f)) formFormlet)
 
 -- | Increment a form ID
@@ -240,15 +240,15 @@ incrementFormId :: FormId -> FormId
 incrementFormId = add 1
   where
   add i (FormId p (x :| xs)) = FormId p $ (x + i) :| xs
-  add i (FormIdName n x) = FormIdName n $ x + i 
+  add i (FormIdName n x) = FormIdName n $ x + i
 
 -- | Check if a 'FormId' is contained in a 'FormRange'
 isInRange
   :: FormId -- ^ Id to check for
   -> FormRange -- ^ Range
   -> Bool -- ^ If the range contains the id
-isInRange a (FormRange b c) = 
-     formIdentifier a >= formIdentifier b 
+isInRange a (FormRange b c) =
+     formIdentifier a >= formIdentifier b
   && formIdentifier a < formIdentifier c
 
 -- | Check if a 'FormRange' is contained in another 'FormRange'
@@ -257,7 +257,7 @@ isSubRange
   -> FormRange -- ^ Larger range
   -> Bool -- ^ If the sub-range is contained in the larger range
 isSubRange (FormRange a b) (FormRange c d) =
-     formIdentifier a >= formIdentifier c 
+     formIdentifier a >= formIdentifier c
   && formIdentifier b <= formIdentifier d
 
 -- | Get a @FormId@ from the FormState
@@ -295,7 +295,7 @@ incrementFormRange = do
   put $ unitRange endF1
 
 -- | Run a form
-runForm :: Monad m 
+runForm :: Monad m
   => Text
   -> Form m input err view a
   -> m (View err view, Result err (Proved a))
@@ -307,7 +307,7 @@ runForm_ :: (Monad m)
   => Text
   -> Form m input err view a
   -> m (view, Maybe a)
-runForm_ prefix form = do 
+runForm_ prefix form = do
   (view', result) <- runForm prefix form
   pure $ case result of
     Error e -> (unView view' e, Nothing)
@@ -353,7 +353,7 @@ mkOk i view' val = pure
 
 -- | Lift the errors into the result type. This will cause the form to always 'succeed'
 formEither :: Monad m
-  => Form m input err view a 
+  => Form m input err view a
   -> Form m input err view (Either [err] a)
 formEither Form{formDecodeInput, formInitialValue, formFormlet} = Form
   { formDecodeInput = \input -> do
@@ -368,9 +368,9 @@ formEither Form{formDecodeInput, formInitialValue, formFormlet} = Form
       let res = case res' of
             Error err -> Left (map snd err)
             Ok (Proved _ x) -> Right x
-      pure  
+      pure
         ( view'
-        , Ok $ Proved 
+        , Ok $ Proved
             { pos = range
             , unProved = res
             }
@@ -394,6 +394,7 @@ retainErrors = retainErrorsOn (==)
 retainChildErrors :: FormRange -> [(FormRange, e)] -> [e]
 retainChildErrors = retainErrorsOn isSubRange
 
+{-# INLINE retainErrorsOn #-}
 retainErrorsOn :: (FormRange -> FormRange -> Bool) -> FormRange -> [(FormRange, e)] -> [e]
 retainErrorsOn f range = map snd . filter ((`f` range) . fst)
 
@@ -410,11 +411,11 @@ view html = Form (successDecode ()) (pure ()) $ do
 
 -- | Lift a monad morphism from @m@ to @n@ into a monad morphism from @(Form m)@ to @(Form n)@
 -- eg. @newtype@s, @lift@s
-hoistForm :: (Monad f) 
+hoistForm :: (Monad f)
   => (forall x. m x -> f x)
   -> Form m input err view a
   -> Form f input err view a
-hoistForm f Form{formDecodeInput, formInitialValue, formFormlet} = Form 
+hoistForm f Form{formDecodeInput, formInitialValue, formFormlet} = Form
   { formDecodeInput = f . formDecodeInput
   , formInitialValue = f formInitialValue
   , formFormlet = mapStateT f formFormlet
@@ -485,9 +486,9 @@ pureRes def x' = case x' of
 
 -- | @Form@ is a @MonadTrans@, but we can't have an instance of it because of the order and kind of its type variables
 liftForm :: (Monad m, Monoid view) => m a -> Form m input err view a
-liftForm x = Form 
+liftForm x = Form
   { formDecodeInput = const (fmap Right x)
-  , formInitialValue = x 
+  , formInitialValue = x
   , formFormlet = lift x >>= pureFormState
   }
 
