@@ -101,8 +101,8 @@ instance Alternative Value where
 
 instance Semigroup a => Semigroup (Value a) where
   Missing <> Missing = Missing
-  Default <> Missing = Default
   Missing <> Default = Default
+  Default <> Missing = Default
   Default <> Default = Default
   Found x <> Found y = Found (x <> y)
   Found x <> _ = Found x
