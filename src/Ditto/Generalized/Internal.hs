@@ -1,6 +1,5 @@
 {-# LANGUAGE 
     NamedFieldPuns
-  , OverloadedStrings
   , ScopedTypeVariables
   , LambdaCase
   , TypeFamilies
@@ -247,7 +246,8 @@ inputMulti i' choices fromInput mkView isSelected =
         mkOk i view' vals
 
 augmentChoices :: (Monad m) => FormId ->  [(a, lbl, Bool)] -> FormState m [Choice lbl a]
-augmentChoices i choices' = mapM (augmentChoice i) choices'
+augmentChoices i choices = mapM (augmentChoice i) choices
+
 augmentChoice :: (Monad m) => FormId -> (a, lbl, Bool) -> FormState m (Choice lbl a)
 augmentChoice i (a, lbl, selected) = do
   pure $ Choice i lbl selected a
