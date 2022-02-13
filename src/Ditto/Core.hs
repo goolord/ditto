@@ -132,8 +132,7 @@ instance (Environment m input, Monoid view, FormError input err) => Monad (Form 
               formDecodeInput (f iv) input
             Ok (Proved _ x) -> formDecodeInput (f x) input
       , formInitialValue = do
-          res <- mres
-          case res of
+          mres >>= \case
             Error {} -> do
               iv <- formInitialValue form
               formInitialValue $ f iv
