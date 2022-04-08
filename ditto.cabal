@@ -9,7 +9,7 @@ description:
   an HTML form that includes validation.
 license: BSD-3-Clause
 license-file: LICENSE
-author: Jeremy Shaw, Jasper Van der Jeugt <m@jaspervdj.be>, Zachary Churchill <zacharyachurchill@gmail.com>
+author: Zachary Churchill <zacharyachurchill@gmail.com>
 maintainer: Zachary Churchill <zacharyachurchill@gmail.com>
 copyright: 
   2012 Jeremy Shaw, Jasper Van der Jeugt, SeeReason Partners LLC,

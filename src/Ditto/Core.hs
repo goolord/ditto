@@ -7,6 +7,7 @@
   , NamedFieldPuns
   , OverloadedStrings
   , RankNTypes
+  , RecordWildCards
   , ScopedTypeVariables
   , StandaloneDeriving
   , TypeApplications
@@ -195,7 +196,7 @@ instance Monad m => Environment (NoEnvironment input m) input where
 
 -- | @environment@ which will always return the initial value
 noEnvironment :: Applicative m => FormId -> m (Value input)
-noEnvironment = const (pure Default)
+noEnvironment = const $ pure Default
 
 -- | Run the form, but with a given @environment@ function
 newtype WithEnvironment input m a = WithEnvironment { getWithEnvironment :: ReaderT (FormId -> m (Value input)) m a }
@@ -231,8 +232,9 @@ mapView :: (Functor m)
   => (view -> view') -- ^ Manipulator
   -> Form m input err view a -- ^ Initial form
   -> Form m input err view' a -- ^ Resulting form
-mapView f Form{formDecodeInput, formInitialValue, formFormlet} =
-  Form formDecodeInput formInitialValue (fmap (first (fmap f)) formFormlet)
+mapView f Form{formDecodeInput, formInitialValue, formFormlet=formFormlet'} =
+  let formFormlet = fmap (first (fmap f)) formFormlet'
+  in Form {..}
 
 -- | Increment a form ID
 incrementFormId :: FormId -> FormId

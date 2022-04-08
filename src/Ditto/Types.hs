@@ -131,4 +131,3 @@ data Proved a = Proved
   { pos :: FormRange
   , unProved :: a
   } deriving (Show, Functor, Foldable, Traversable)
-

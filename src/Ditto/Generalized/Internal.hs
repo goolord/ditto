@@ -171,7 +171,7 @@ inputFile :: forall m ft input err view. (Monad m, FormInput input, FormError in
   -> (FormId -> view)
   -> Form m input err view (FileType input)
 inputFile i' toView =
-  Form (pure . getInputFile') (pure mempty) $ do -- FIXME
+  Form (pure . getInputFile) (pure mempty) $ do -- FIXME
     i <- i'
     v <- getFormInput' i
     case v of
@@ -180,7 +180,7 @@ inputFile i' toView =
           ( View $ const $ toView i
           , Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
           )
-      Found x -> case getInputFile' x of
+      Found x -> case getInputFile x of
         Right a -> pure
           ( View $ const $ toView i
           , Ok ( Proved
@@ -197,10 +197,6 @@ inputFile i' toView =
           ( View $ const $ toView i
           , Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) ::err)]
           )
-  where
-    -- just here for the type-signature to make the type-checker happy
-    getInputFile' :: (FormError input err) => input -> Either err (FileType input)
-    getInputFile' = getInputFile
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
 inputMulti :: forall m input err view a lbl. (FormError input err, FormInput input, Environment m input, Eq a)
