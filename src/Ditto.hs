@@ -1,5 +1,5 @@
 -- | Reexports important modules of @ditto@
-module Ditto 
+module Ditto
   ( module P
   ) where
 

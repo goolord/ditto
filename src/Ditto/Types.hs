@@ -1,10 +1,10 @@
-{-# LANGUAGE 
+{-# LANGUAGE
     BangPatterns
   , DeriveFoldable
   , DeriveFunctor
   , DeriveTraversable
   , GeneralizedNewtypeDeriving
-  , MultiParamTypeClasses 
+  , MultiParamTypeClasses
   , OverloadedStrings
   , PatternSynonyms
   , ExplicitForAll
@@ -40,7 +40,7 @@ data FormId
   = FormId
       {-# UNPACK #-} !Text           -- ^ Global prefix for the form
       {-# UNPACK #-} !(NonEmpty Int) -- ^ Stack indicating field. Head is most specific to this item
-  | FormIdName 
+  | FormIdName
       {-# UNPACK #-} !Text -- ^ Local name of the input
       {-# UNPACK #-} !Int  -- ^ Index of the input
   deriving (Eq, Ord, Show)

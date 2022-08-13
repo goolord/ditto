@@ -1,4 +1,4 @@
-{-# LANGUAGE 
+{-# LANGUAGE
     DeriveFunctor
   , NamedFieldPuns
   , ScopedTypeVariables
@@ -42,8 +42,8 @@ prove
   => Form m input error view a
   -> Proof m error a b
   -> Form m input error view b
-prove Form{formDecodeInput, formInitialValue, formFormlet} (Proof f ivB) = Form 
-  (\input -> do 
+prove Form{formDecodeInput, formInitialValue, formFormlet} (Proof f ivB) = Form
+  (\input -> do
     a <- formDecodeInput input
     case a of
       Left x -> pure $ Left x
@@ -110,8 +110,8 @@ decimal mkError i = Proof (pure . toDecimal) (const i)
         _ -> Left $ mkError str
 
 -- | read signed decimal number
-signedDecimal :: (Monad m, Eq i, Real i) 
-  => (String -> error) 
+signedDecimal :: (Monad m, Eq i, Real i)
+  => (String -> error)
   -> i
   -> Proof m error String i
 signedDecimal mkError i = Proof (pure . toDecimal) (const i)
@@ -122,8 +122,8 @@ signedDecimal mkError i = Proof (pure . toDecimal) (const i)
         _ -> Left $ mkError str
 
 -- | read 'RealFrac' number
-realFrac :: (Monad m, RealFrac a) 
-  => (String -> error) 
+realFrac :: (Monad m, RealFrac a)
+  => (String -> error)
   -> a
   -> Proof m error String a
 realFrac mkError a = Proof (pure . toRealFrac) (const a)
@@ -134,8 +134,8 @@ realFrac mkError a = Proof (pure . toRealFrac) (const a)
         _ -> Left $ mkError str
 
 -- | read a signed 'RealFrac' number
-realFracSigned :: (Monad m, RealFrac a) 
-  => (String -> error) 
+realFracSigned :: (Monad m, RealFrac a)
+  => (String -> error)
   -> a
   -> Proof m error String a
 realFracSigned mkError a = Proof (pure . toRealFrac) (const a)
