@@ -318,7 +318,9 @@ runForm_ prefix form = do
 --
 -- Returns:
 --
--- [@Left view@] on failure. The @view@ will have already been applied to the errors.
+-- [@Left view@] on failure. The @view@ will be produced by a @View err view@,
+-- which can be modified with functions like 'withChildErrors'
+-- for the sake of rendering errors.
 --
 -- [@Right a@] on success.
 --
@@ -332,7 +334,8 @@ eitherForm id' form = do
     Error e -> Left (unView view' e)
     Ok x -> Right (unProved x)
 
--- | infix mapView: succinctly mix the @view@ dsl and the formlets dsl  @foo \@$ do ..@
+-- | infix mapView: succinctly mix the @view@ dsl and the formlets dsl
+-- e.g. @div_ [class_ "my cool form"] \@$ do (_ :: Form m input err view' a).@
 infixr 0 @$
 (@$) :: Monad m => (view -> view') -> Form m input err view a -> Form m input err view' a
 (@$) = mapView
@@ -399,7 +402,8 @@ retainChildErrors = retainErrorsOn isSubRange
 retainErrorsOn :: (FormRange -> FormRange -> Bool) -> FormRange -> [(FormRange, e)] -> [e]
 retainErrorsOn f range = map snd . filter ((`f` range) . fst)
 
--- | Turn a @view@ into a @Form@
+-- | Make a form which renders a @view@, accepts no input
+-- and produces no output
 view :: Monad m => view -> Form m input err view ()
 view html = Form (successDecode ()) (pure ()) $ do
   i <- getFormId
