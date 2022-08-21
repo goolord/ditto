@@ -1,4 +1,4 @@
-{-# LANGUAGE 
+{-# LANGUAGE
     NamedFieldPuns
   , ScopedTypeVariables
   , LambdaCase
@@ -71,7 +71,7 @@ inputList formSId fromInput viewCat initialValue defView createForm =
     case v of
       Default -> do
         views <- for initialValue $ \x -> do
-          (View viewF, _) <- formFormlet $ createForm x 
+          (View viewF, _) <- formFormlet $ createForm x
           pure $ viewF []
         pure
           ( View $ const $ viewCat views
@@ -83,7 +83,7 @@ inputList formSId fromInput viewCat initialValue defView createForm =
       Found inp -> lift (fromInput inp) >>= \case
         Right xs -> do
           views <- for xs $ \x -> do
-            (View viewF, _) <- formFormlet $ createForm x 
+            (View viewF, _) <- formFormlet $ createForm x
             pure $ viewF []
           pure
             ( View $ const $ viewCat views
@@ -95,7 +95,7 @@ inputList formSId fromInput viewCat initialValue defView createForm =
         Left err -> do
           let err' = [(unitRange i, err)]
           views <- for initialValue $ \x -> do
-            (View viewF, _) <- formFormlet $ createForm x 
+            (View viewF, _) <- formFormlet $ createForm x
             pure $ viewF err'
           pure
             ( View $ const $ viewCat views
@@ -124,15 +124,15 @@ inputMaybe i' fromInput toView initialValue =
     case v of
       Default -> pure
           ( View $ const $ toView i initialValue
-          , Ok ( Proved
+          , Ok Proved
               { pos = unitRange i
               , unProved = initialValue
-              })
+              }
           )
       Found x -> case fromInput x of
         Right a -> pure
           ( View $ const $ toView i (Just a)
-          , Ok $ Proved
+          , Ok Proved
               { pos = unitRange i
               , unProved = Just a
               }
@@ -159,10 +159,10 @@ inputNoData i' toView =
     i <- i'
     pure
       ( View $ const $ toView i
-      , Ok ( Proved
+      , Ok Proved
           { pos = unitRange i
           , unProved = ()
-          })
+          }
       )
 
 -- | used for @\<input type=\"file\"\>@
@@ -183,10 +183,10 @@ inputFile i' toView =
       Found x -> case getInputFile x of
         Right a -> pure
           ( View $ const $ toView i
-          , Ok ( Proved
+          , Ok Proved
               { pos = unitRange i
               , unProved = a
-              })
+              }
           )
         Left err -> pure
           ( View $ const $ toView i
