@@ -2,6 +2,7 @@
     DeriveFunctor
   , NamedFieldPuns
   , ScopedTypeVariables
+  , TypeOperators
 #-}
 
 {- |

@@ -3,6 +3,7 @@
   , TypeFamilies
   , OverloadedStrings
   , FunctionalDependencies
+  , TypeOperators
 #-}
 
 {- |

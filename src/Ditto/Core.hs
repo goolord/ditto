@@ -11,6 +11,7 @@
   , ScopedTypeVariables
   , StandaloneDeriving
   , TypeApplications
+  , TypeOperators
 #-}
 
 -- | The core module for @ditto@.

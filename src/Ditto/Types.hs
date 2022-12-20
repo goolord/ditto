@@ -8,6 +8,7 @@
   , OverloadedStrings
   , PatternSynonyms
   , ExplicitForAll
+  , TypeOperators
 #-}
 
 -- | Types relevant to forms and their validation.
