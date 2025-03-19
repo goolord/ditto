@@ -1,6 +1,7 @@
-{-# LANGUAGE 
+{-# LANGUAGE
     ScopedTypeVariables
   , TypeFamilies
+  , TypeOperators
 #-}
 
 -- | This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
