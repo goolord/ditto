@@ -1,19 +1,3 @@
-{-# LANGUAGE
-    DeriveFunctor
-  , FlexibleInstances
-  , FunctionalDependencies
-  , GeneralizedNewtypeDeriving
-  , LambdaCase
-  , NamedFieldPuns
-  , OverloadedStrings
-  , RankNTypes
-  , RecordWildCards
-  , ScopedTypeVariables
-  , StandaloneDeriving
-  , TypeApplications
-  , TypeOperators
-#-}
-
 -- | The core module for @ditto@.
 --
 -- This module provides the @Form@ type and helper functions
@@ -54,6 +38,7 @@ module Ditto.Core (
   , unitRange
   , view
   , viewForm
+  , hoistForm
   , pureRes
   , liftForm
   ) where
@@ -80,7 +65,7 @@ data Form m input err view a = Form
   { formDecodeInput :: input -> m (Either err a) -- ^ Decode the value from the input
   , formInitialValue :: m a -- ^ The initial value
   , formFormlet :: FormState m (View err view, Result err (Proved a)) -- ^ A @FormState@ which produces a @View@ and a @Result@
-  } deriving (Functor)
+  } deriving stock (Functor)
 
 instance (Monad m, Monoid view) => Applicative (Form m input err view) where
 
@@ -123,7 +108,7 @@ instance (Monad m, Monoid view) => Applicative (Form m input err view) where
     (v2, _) <- formFormlet f2
     pure (v1 <> v2, r)
 
-instance (Environment m input, Monoid view, FormError input err) => Monad (Form m input err view) where
+instance (Environment m input, Monoid view) => Monad (Form m input err view) where
   form >>= f =
     let mres = snd <$> runForm "" form
     in Form
@@ -190,7 +175,7 @@ class Monad m => Environment m input | m -> input where
 
 -- | Run the form, but always return the initial value
 newtype NoEnvironment input m a = NoEnvironment { getNoEnvironment ::  m a }
-  deriving (Monad, Functor, Applicative)
+  deriving newtype (Functor, Applicative, Monad)
 
 instance Monad m => Environment (NoEnvironment input m) input where
   environment = noEnvironment
@@ -201,9 +186,9 @@ noEnvironment = const $ pure Default
 
 -- | Run the form, but with a given @environment@ function
 newtype WithEnvironment input m a = WithEnvironment { getWithEnvironment :: ReaderT (FormId -> m (Value input)) m a }
-  deriving (Monad, Functor, Applicative)
+  deriving newtype (Functor, Applicative, Monad)
 
-deriving instance Monad m => MonadReader (FormId -> m (Value input)) (WithEnvironment input m)
+deriving newtype instance Monad m => MonadReader (FormId -> m (Value input)) (WithEnvironment input m)
 
 instance MonadTrans (WithEnvironment input) where
   lift = WithEnvironment . lift
@@ -417,8 +402,8 @@ view html = Form (successDecode ()) (pure ()) $ do
 
 -- | Lift a monad morphism from @m@ to @n@ into a monad morphism from @(Form m)@ to @(Form n)@
 -- eg. @newtype@s, @lift@s
-hoistForm :: (Monad f)
-  => (forall x. m x -> f x)
+hoistForm
+  :: (forall x. m x -> f x)
   -> Form m input err view a
   -> Form f input err view a
 hoistForm f Form{formDecodeInput, formInitialValue, formFormlet} = Form
@@ -471,7 +456,7 @@ viewForm prefix form = do
   pure (unView v [])
 
 -- | lift the result of a decoding to a @Form@
-pureRes :: (Monad m, Monoid view, FormError input err)
+pureRes :: (Monad m, Monoid view)
   => a
   -> Either err a
   -> Form m input err view a

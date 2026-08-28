@@ -1,9 +1,3 @@
-{-# LANGUAGE
-    ScopedTypeVariables
-  , TypeFamilies
-  , TypeOperators
-#-}
-
 -- | This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
 --
 -- For unnamed (enumerated) formlets, see @Ditto.Generalized.Unnamed@
@@ -43,7 +37,7 @@ input :: (Environment m input, FormError input err)
 input name = G.input (getNamedFormId name)
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
-inputMaybe :: (Environment m input, FormError input err)
+inputMaybe :: Environment m input
   => Text
   -> (input -> Either err a)
   -> (FormId -> Maybe a -> view)
@@ -66,7 +60,7 @@ inputFile :: forall m input err view ft. (Environment m input, FormInput input, 
 inputFile name = G.inputFile (getNamedFormId name)
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
-inputMulti :: forall m input err view a lbl. (FormError input err, FormInput input, Environment m input, Eq a)
+inputMulti :: forall m input err view a lbl. (Environment m input, Eq a)
   => Text
   -> [(a, lbl)] -- ^ value, label, initially checked
   -> (input -> Either err [a])
@@ -76,7 +70,7 @@ inputMulti :: forall m input err view a lbl. (FormError input err, FormInput inp
 inputMulti name = G.inputMulti (getNamedFormId name)
 
 -- | radio buttons, single @\<select\>@ boxes
-inputChoice :: forall a m err input lbl view. (FormError input err, FormInput input, Environment m input, Eq a, Monoid view)
+inputChoice :: forall a m err input lbl view. (FormError input err, Environment m input, Eq a)
   => Text
   -> (a -> Bool) -- ^ is default
   -> NonEmpty (a, lbl) -- ^ value, label
@@ -86,7 +80,7 @@ inputChoice :: forall a m err input lbl view. (FormError input err, FormInput in
 inputChoice name = G.inputChoice (getNamedFormId name)
 
 -- | this is necessary in order to basically map over the decoding function
-inputList :: forall m input err a view. (Monad m, FormError input err, Environment m input)
+inputList :: forall m input err a view. Environment m input
   => Text
   -> (input -> m (Either err [a])) -- ^ decoding function for the list
   -> ([view] -> view) -- ^ how to concatenate views
@@ -161,7 +155,7 @@ ireq name fromInput initialValue = Form (pure . fromInput) (pure initialValue) $
       )
 
 -- | an optional @Form@ with no @view@
-iopt :: forall m input view err a. (Monoid view, Environment m input, FormError input err)
+iopt :: forall m input view err a. (Monoid view, Environment m input)
   => Text 
   -> (input -> Either err a)
   -> Maybe a

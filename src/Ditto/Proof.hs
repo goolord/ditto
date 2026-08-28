@@ -1,10 +1,3 @@
-{-# LANGUAGE
-    DeriveFunctor
-  , NamedFieldPuns
-  , ScopedTypeVariables
-  , TypeOperators
-#-}
-
 {- |
 This module defines the 'Proof' type, some proofs, and some helper functions.
 
@@ -19,7 +12,6 @@ module Ditto.Proof where
 
 import Control.Monad.Trans (lift)
 import Ditto.Core (Form(..))
-import Ditto.Backend (FormError(..))
 import Ditto.Types (Proved(..), Result(..))
 import Numeric (readDec, readFloat, readSigned)
 
@@ -35,11 +27,11 @@ import Numeric (readDec, readFloat, readSigned)
 data Proof m err a b = Proof
   { proofFunction :: a -> m (Either err b) -- ^ function which provides the proof
   , proofNewInitialValue :: a -> b -- ^ usually @const b@
-  } deriving (Functor)
+  } deriving stock (Functor)
 
 -- | apply a 'Proof' to a 'Form'
 prove
-  :: (Monad m, Monoid view, FormError input error)
+  :: Monad m
   => Form m input error view a
   -> Proof m error a b
   -> Form m input error view b
@@ -70,7 +62,7 @@ prove Form{formDecodeInput, formInitialValue, formFormlet} (Proof f ivB) = Form
 
 -- | transform the 'Form' result using a monadic 'Either' function.
 transformEitherM
-  :: (Monad m, Monoid view, FormError input error)
+  :: Monad m
   => Form m input error view a
   -> (a -> m (Either error b))
   -> (a -> b)
@@ -79,7 +71,7 @@ transformEitherM frm func ivb = frm `prove` Proof func ivb
 
 -- | transform the 'Form' result using an 'Either' function.
 transformEither
-  :: (Monad m, Monoid view, FormError input error)
+  :: Monad m
   => Form m input error view a
   -> (a -> Either error b)
   -> (a -> b)
@@ -111,7 +103,7 @@ decimal mkError i = Proof (pure . toDecimal) (const i)
         _ -> Left $ mkError str
 
 -- | read signed decimal number
-signedDecimal :: (Monad m, Eq i, Real i)
+signedDecimal :: (Monad m, Real i)
   => (String -> error)
   -> i
   -> Proof m error String i

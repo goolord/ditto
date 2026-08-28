@@ -1,11 +1,3 @@
-{-# LANGUAGE
-    NamedFieldPuns
-  , ScopedTypeVariables
-  , LambdaCase
-  , TypeFamilies
-  , TypeOperators
-#-}
-
 -- | This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
 
 module Ditto.Generalized.Internal where
@@ -57,7 +49,7 @@ input formSId fromInput toView initialValue =
         )
 
 -- | this is necessary in order to basically map over the decoding function
-inputList :: forall m input err a view view'. (Monad m, FormError input err, Environment m input)
+inputList :: forall m input err a view view'. Environment m input
   => FormState m FormId
   -> (input -> m (Either err [a])) -- ^ decoding function for the list
   -> ([view] -> view') -- ^ how to concatenate views
@@ -112,7 +104,7 @@ inputList formSId fromInput viewCat initialValue defView createForm =
           )
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
-inputMaybe :: (Monad m, FormError input err, Environment m input)
+inputMaybe :: Environment m input
   => FormState m FormId
   -> (input -> Either err a)
   -> (FormId -> Maybe a -> view)
@@ -167,19 +159,22 @@ inputNoData i' toView =
       )
 
 -- | used for @\<input type=\"file\"\>@
-inputFile :: forall m ft input err view. (Monad m, FormInput input, FormError input err, Environment m input, ft ~ FileType input, Monoid ft)
+inputFile :: forall m ft input err view. (FormInput input, FormError input err, Environment m input, ft ~ FileType input, Monoid ft)
   => FormState m FormId
   -> (FormId -> view)
   -> Form m input err view (FileType input)
 inputFile i' toView =
-  Form (pure . getInputFile) (pure mempty) $ do -- FIXME
+  Form (pure . getInputFile) (pure mempty) $ do
     i <- i'
     v <- getFormInput' i
     case v of
       Default ->
         pure
           ( View $ const $ toView i
-          , Error [(unitRange i, commonFormError (InputMissing i :: CommonFormError input) :: err)]
+          , Ok Proved
+              { pos = unitRange i
+              , unProved = mempty
+              }
           )
       Found x -> case getInputFile x of
         Right a -> pure
@@ -200,7 +195,7 @@ inputFile i' toView =
           )
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
-inputMulti :: forall m input err view a lbl. (FormError input err, FormInput input, Environment m input, Eq a)
+inputMulti :: forall m input err view a lbl. (Environment m input, Eq a)
   => FormState m FormId
   -> [(a, lbl)] -- ^ value, label, initially checked
   -> (input -> Either err [a])
@@ -258,7 +253,7 @@ data Choice lbl a = Choice
   }
 
 -- | radio buttons, single @\<select\>@ boxes
-inputChoice :: forall a m err input lbl view. (FormError input err, FormInput input, Monad m, Eq a, Monoid view, Environment m input)
+inputChoice :: forall a m err input lbl view. (FormError input err, Eq a, Environment m input)
   => FormState m FormId
   -> (a -> Bool) -- ^ is default
   -> NonEmpty (a, lbl) -- ^ value, label

@@ -1,11 +1,3 @@
-{-# LANGUAGE
-    MultiParamTypeClasses
-  , TypeFamilies
-  , OverloadedStrings
-  , FunctionalDependencies
-  , TypeOperators
-#-}
-
 {- |
 This module contains two classes. 'FormInput' is a class which is parameterized over the @input@ type used to represent form data in different web frameworks. There should be one instance for each framework, such as Happstack, Snap, WAI, etc.
 
@@ -30,7 +22,7 @@ data CommonFormError input
   | MultiFilesFound input
   | MultiStringsFound input
   | MissingDefaultValue
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
 
 -- | some default error messages for 'CommonFormError'
 commonFormErrorStr

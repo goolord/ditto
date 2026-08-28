@@ -1,16 +1,3 @@
-{-# LANGUAGE
-    BangPatterns
-  , DeriveFoldable
-  , DeriveFunctor
-  , DeriveTraversable
-  , GeneralizedNewtypeDeriving
-  , MultiParamTypeClasses
-  , OverloadedStrings
-  , PatternSynonyms
-  , ExplicitForAll
-  , TypeOperators
-#-}
-
 -- | Types relevant to forms and their validation.
 module Ditto.Types (
   -- * FormId
@@ -44,7 +31,7 @@ data FormId
   | FormIdName
       {-# UNPACK #-} !Text -- ^ Local name of the input
       {-# UNPACK #-} !Int  -- ^ Index of the input
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
 
 instance IsString FormId where
   fromString x = FormIdName (T.pack x) 0
@@ -65,7 +52,7 @@ formIdentifier (FormIdName _ x) = x
 -- | A range of ID's to specify a group of forms
 data FormRange
   = FormRange FormId FormId
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 ------------------------------------------------------------------------------
 -- Form result types
@@ -75,7 +62,7 @@ data FormRange
 
 -- | Function which creates the form view
 newtype View err v = View { unView :: [(FormRange, err)] -> v }
-  deriving (Semigroup, Monoid, Functor)
+  deriving newtype (Semigroup, Monoid, Functor)
 
 -- | used to represent whether a value was found in the form
 -- submission data, missing from the form submission data, or expected
@@ -84,7 +71,7 @@ data Value a
   = Default
   | Missing
   | Found a
-  deriving (Eq, Show, Functor, Traversable, Foldable)
+  deriving stock (Eq, Show, Functor, Foldable, Traversable)
 
 instance Applicative Value where
   pure = Found
@@ -112,7 +99,8 @@ instance Semigroup a => Semigroup (Value a) where
 -- | Type for failing computations
 -- Similar to @Either@ but with an accumilating @Applicative@ instance
 newtype Result e ok = Result { getResult :: Either [(FormRange, e)] ok }
-  deriving (Show, Eq, Functor, Foldable, Traversable, Monad)
+  deriving newtype (Eq, Show, Functor, Foldable, Monad)
+  deriving stock (Traversable)
 
 pattern Error :: forall e ok. [(FormRange, e)] -> Result e ok
 pattern Error e = Result (Left e)
@@ -131,4 +119,4 @@ instance Applicative (Result e) where
 data Proved a = Proved
   { pos :: FormRange
   , unProved :: a
-  } deriving (Show, Functor, Foldable, Traversable)
+  } deriving stock (Show, Functor, Foldable, Traversable)

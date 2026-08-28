@@ -1,9 +1,3 @@
-{-# LANGUAGE
-    ScopedTypeVariables
-  , TypeFamilies
-  , TypeOperators
-#-}
-
 -- | This module provides helper functions for HTML input elements. These helper functions are not specific to any particular web framework or html library.
 --
 -- Additionally, the inputs generated with the functions from this module will have their names/ids automatically enumerated.
@@ -40,7 +34,7 @@ input :: (Environment m input, FormError input err)
 input = G.input getFormId
 
 -- | used for elements like @\<input type=\"submit\"\>@ which are not always present in the form submission data.
-inputMaybe :: (Environment m input, FormError input err)
+inputMaybe :: Environment m input
   => (input -> Either err a)
   -> (FormId -> Maybe a -> view)
   -> Maybe a
@@ -60,7 +54,7 @@ inputFile :: forall m input err view ft. (Environment m input, FormInput input, 
 inputFile = G.inputFile getFormId
 
 -- | used for groups of checkboxes, @\<select multiple=\"multiple\"\>@ boxes
-inputMulti :: forall m input err view a lbl. (FormError input err, FormInput input, Environment m input, Eq a)
+inputMulti :: forall m input err view a lbl. (Environment m input, Eq a)
   => [(a, lbl)] -- ^ value, label, initially checked
   -> (input -> Either err [a])
   -> (FormId -> [G.Choice lbl a] -> view) -- ^ function which generates the view
@@ -69,7 +63,7 @@ inputMulti :: forall m input err view a lbl. (FormError input err, FormInput inp
 inputMulti = G.inputMulti getFormId
 
 -- | radio buttons, single @\<select\>@ boxes
-inputChoice :: forall a m err input lbl view. (FormError input err, FormInput input, Environment m input, Eq a, Monoid view)
+inputChoice :: forall a m err input lbl view. (FormError input err, Environment m input, Eq a)
   => (a -> Bool) -- ^ is default
   -> NonEmpty (a, lbl) -- ^ value, label
   -> (input -> Either err a)
@@ -78,7 +72,7 @@ inputChoice :: forall a m err input lbl view. (FormError input err, FormInput in
 inputChoice = G.inputChoice getFormId
 
 -- | this is necessary in order to basically map over the decoding function
-inputList :: forall m input err a view. (Monad m, FormError input err, Environment m input)
+inputList :: forall m input err a view. Environment m input
   => (input -> m (Either err [a])) -- ^ decoding function for the list
   -> ([view] -> view) -- ^ how to concatenate views
   -> [a] -- ^ initial values

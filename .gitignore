@@ -1,3 +1,9 @@
 .ghc*
+.hls/
+.hie/
 dist*
+dist-newstyle/
 result*
+cabal.project.local
+cabal.project.local~
+*~
