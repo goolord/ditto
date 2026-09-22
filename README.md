@@ -29,7 +29,3 @@ nix build
 nix flake check
 nix develop
 ```
-
-- `nix flake check` — build library and run the test suite in an isolated Nix derivation (CI uses this).
-- `nix develop` — enter a shell with GHC, `cabal-install`, and HLS; run `cabal test` for iterative work.
-- Flake source includes all project files under the repo root (not only git-tracked paths). `flake.lock` pins nixpkgs.
