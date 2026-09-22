@@ -8,10 +8,6 @@ A portable library which provides type-safe form generation and validation.
 
 This core library is intended to be used in conjunction with other libraries such as [scotty-form](http://hackage.haskell.org/package/scotty-form) and [ditto-lucid](http://hackage.haskell.org/package/ditto-lucid).
 
-## Requirements
-
-Tested on GHC 9.6 through 9.14. GHC 9.10+ uses `GHC2024` by default; older supported GHC versions fall back to `GHC2021` or `Haskell2010` with the required extensions enabled in the cabal file.
-
 ### Cabal
 
 Use this for day-to-day development (fast incremental rebuilds):
